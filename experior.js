@@ -1,6 +1,7 @@
-var experior = {
+var exp = {
 
     ac:        require("ansi-colors"),
+    fs:        require("fs"),
     isaac:     require("isaac"),
     minicle:   require("minicle"),
     process:   require("process"),
@@ -10,12 +11,13 @@ var experior = {
     optionMap: {
         debug:      { short: "d", cnt: 0    },
         help:       { short: "h", cnt: 0    },
-        infile:     { short: "i", vals: [ ] },  // accumulates values
-        outfiles:   { short: "o", vals: [ ] },
+        infile:     { short: "i", vals: [ ] },
+        jsfile:     { short: "j", vals: [ ] },
+        outfile:    { short: "o", vals: [ ] },
         prng:       { short: "p", vals: [ ] },
         quietMode:  { short: "q", cnt: 0    },
         seed:       { short: "s", vals: [ ] },
-        verbose:    { short: "v", cnt: 0    },     // accumulates appearance counts
+        verbose:    { short: "v", cnt: 0    },
     },
     debug:     false,
     infiles:   [ ],
@@ -29,33 +31,39 @@ var experior = {
 main();
 
 
+//==============================================================================
+// Main loop.
+//==============================================================================
+
 function main() {
 
     // Process CLI options -----------------------------------------------------
 
-    experior.minicle(experior.optionMap);
+    exp.minicle(exp.optionMap);
 
     // Begin ceremonial output -------------------------------------------------
 
-    if(experior.optionMap.quietMode.cnt == 0)
-        outputHeader(experior.version);
-    if(experior.optionMap.help.cnt)
+    if(exp.optionMap.quietMode.cnt == 0)
+        outputHeader(exp.version);
+    if(exp.optionMap.help.cnt)
         usage(); // exits
 
     // Have we been asked for PRNGs instead of a test run? ---------------------
 
-    if(experior.optionMap.prng.vals.length == 2) {
-        if(experior.optionMap.seed.vals.length) {
-            var seed = experior.optionMap.seed.vals.join("");
+    if(exp.optionMap.prng.vals.length == 2) {
+        if(exp.optionMap.seed.vals.length) {
+            var seed = exp.optionMap.seed.vals.join("");
         } else {
             var seed = new Date().getTime();
         }
-        prng(experior.optionMap.prng.vals[0], experior.optionMap.prng.vals[1], seed);
-        experior.process.exit(0);
-    } else if(experior.optionMap.prng.vals.length > 1) {
+        prng(exp.optionMap.prng.vals[0], exp.optionMap.prng.vals[1], seed);
+        exp.process.exit(0);
+    } else if(exp.optionMap.prng.vals.length > 1) {
         error("fatal", "PRNG requires both a type and a number.", "EXPERIOR");
-        experior.process.exit(1);
+        exp.process.exit(1);
     }
+
+    // If we get here, it's test time! -----------------------------------------
 
 
 }
@@ -68,7 +76,7 @@ function main() {
 
 function prng(type, num, seed) {
 
-    experior.isaac.seed(seed);
+    exp.isaac.seed(seed);
 
     num = parseInt(num);
     if(isNaN(num) || num < 1)
@@ -84,12 +92,12 @@ function prng(type, num, seed) {
             type = parseInt(type);
             var base = Math.pow(2, type);
             for(var i = 0; i < num; i++)
-                console.log(Math.floor(experior.isaac.random() * base));
+                console.log(Math.floor(exp.isaac.random() * base));
             break;
 
         case "float":
             for(var i = 0; i < num; i++)
-                console.log(experior.isaac.random());
+                console.log(exp.isaac.random());
             break;
 
         default:
@@ -105,15 +113,16 @@ function prng(type, num, seed) {
 
 function usage() {
 
-    console.log(experior.ac.white.bold("  Usage: experior [options]\n\n")
-        + experior.ac.yellow.bold("    -i") + experior.ac.yellow(", ") + experior.ac.yellow.bold("--infile     ") + experior.ac.blue.bold("<filename(s)>  ") + experior.ac.cyan.bold("Path to input file(s).\n")
-        + experior.ac.yellow.bold("    -o") + experior.ac.yellow(", ") + experior.ac.yellow.bold("--outfile    ") + experior.ac.blue.bold("<filename(s)>  ") + experior.ac.cyan.bold("Output file names.\n")
-        + experior.ac.yellow.bold("    -p") + experior.ac.yellow(", ") + experior.ac.yellow.bold("--prng       ") + experior.ac.blue.bold("<type> <num>   ") + experior.ac.cyan.bold("Generate num random numbers of type.\n")
-        + experior.ac.yellow.bold("    -s") + experior.ac.yellow(", ") + experior.ac.yellow.bold("--seed       ") + experior.ac.blue.bold("<num|string>   ") + experior.ac.cyan.bold("Explicit PRNG seed.\n")
-        + experior.ac.yellow.bold("    -v") + experior.ac.yellow(", ") + experior.ac.yellow.bold("--verbose    ") + experior.ac.blue.bold("               ") + experior.ac.cyan.bold("Increase verbosity (starts at 1, up to 4).\n")
-        + experior.ac.yellow.bold("    -q") + experior.ac.yellow(", ") + experior.ac.yellow.bold("--quietMode  ") + experior.ac.blue.bold("               ") + experior.ac.cyan.bold("Suppress console output.\n")
-        + experior.ac.yellow.bold("    -d") + experior.ac.yellow(", ") + experior.ac.yellow.bold("--debug      ") + experior.ac.blue.bold("               ") + experior.ac.cyan.bold("Display debugging info.\n")
-        + experior.ac.yellow.bold("    -h") + experior.ac.yellow(", ") + experior.ac.yellow.bold("--help       ") + experior.ac.blue.bold("               ") + experior.ac.cyan.bold("Display this text.\n\n"));
+    console.log(exp.ac.white.bold("  Usage: experior [options]\n\n")
+        + exp.ac.yellow.bold("    -i") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--infile     ") + exp.ac.blue.bold("<filename(s)>  ") + exp.ac.cyan.bold("Path to input file(s).\n")
+        + exp.ac.yellow.bold("    -o") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--outfile    ") + exp.ac.blue.bold("<filename(s)>  ") + exp.ac.cyan.bold("Output file names.\n")
+        + exp.ac.yellow.bold("    -j") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--jsfile     ") + exp.ac.blue.bold("<filename(s)>  ") + exp.ac.cyan.bold("JavaScript test file(s).\n")
+        + exp.ac.yellow.bold("    -p") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--prng       ") + exp.ac.blue.bold("<type> <num>   ") + exp.ac.cyan.bold("Generate num random numbers of type.\n")
+        + exp.ac.yellow.bold("    -s") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--seed       ") + exp.ac.blue.bold("<num|string>   ") + exp.ac.cyan.bold("Explicit PRNG seed.\n")
+        + exp.ac.yellow.bold("    -v") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--verbose    ") + exp.ac.blue.bold("               ") + exp.ac.cyan.bold("Increase verbosity (starts at 1, up to 4).\n")
+        + exp.ac.yellow.bold("    -q") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--quietMode  ") + exp.ac.blue.bold("               ") + exp.ac.cyan.bold("Suppress console output.\n")
+        + exp.ac.yellow.bold("    -d") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--debug      ") + exp.ac.blue.bold("               ") + exp.ac.cyan.bold("Display debugging info.\n")
+        + exp.ac.yellow.bold("    -h") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--help       ") + exp.ac.blue.bold("               ") + exp.ac.cyan.bold("Display this text.\n\n"));
 
 }
 
@@ -125,9 +134,9 @@ function usage() {
 function outputHeader(version) {
 
     console.log(
-        "\n" + experior.ac.blue("===========================================================================") + "\n"
-        + experior.ac.yellow.bold("         Experior v" + version + " -- Minimalist Unit/Regression Test Tool") + "\n"
-        + experior.ac.blue("===========================================================================") + "\n"
+        "\n" + exp.ac.blue("===========================================================================") + "\n"
+        + exp.ac.yellow.bold("         Experior v" + version + " -- Minimalist Unit/Regression Test Tool") + "\n"
+        + exp.ac.blue("===========================================================================") + "\n"
     );
 
 }
@@ -140,27 +149,27 @@ function outputHeader(version) {
 
 function error(level, message, location = "EXPERIOR") {
 
-    if(!experior.quietMode) {
+    if(!exp.quietMode) {
         switch(level) {
             case "fatal":
-                console.log(experior.ac.bgRed.yellowBright("[" + location + "]") + experior.ac.redBright(" FATAL ERROR: ") + experior.ac.yellowBright(message));
+                console.log(exp.ac.bgRed.yellowBright("[" + location + "]") + exp.ac.redBright(" FATAL ERROR: ") + exp.ac.yellowBright(message));
                 break;
             case "warn":
-                if(experior.verbosity >= 1)
-                    console.log(experior.ac.bgYellow.whiteBright("[" + location + "]") + experior.ac.yellowBright(" WARNING: ") + message);
+                if(exp.verbosity >= 1)
+                    console.log(exp.ac.bgYellow.whiteBright("[" + location + "]") + exp.ac.yellowBright(" WARNING: ") + message);
                 break;
             case "info":
-                if(experior.verbosity >= 2)
-                    console.log(experior.ac.bgGreen.whiteBright("[" + location + "]") + experior.ac.greenBright(" INFO: ") + message);
+                if(exp.verbosity >= 2)
+                    console.log(exp.ac.bgGreen.whiteBright("[" + location + "]") + exp.ac.greenBright(" INFO: ") + message);
                 break;
             case "debug":
-                if(experior.verbosity >= 3 || experior.debug)
+                if(exp.verbosity >= 3 || exp.debug)
                     console.log("[" + location + "] DEBUG: " + message);
                 break;
         }
     }
 
-    if(level == "fatal" && experior.debug < 2)
+    if(level == "fatal" && exp.debug < 2)
         this.process.exit(1);
 }
 
