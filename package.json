@@ -1,0 +1,16 @@
+{
+  "name": "experior",
+  "version": "0.0.1",
+  "description": "A powerful but minimalist unit and regression test tool.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Eric O'Dell",
+  "license": "BSD-2-Clause",
+  "dependencies": {
+    "ansi-colors": "^3.2.4",
+    "isaac": "0.0.5",
+    "minicle": "0.0.1"
+  }
+}
