@@ -8,6 +8,7 @@ var exp = {
 
     version:   "0.0.1",
     formats:   [ "console", "ansi", "txt", "html", "csv" ],
+    prefix:    "@EXPERIOR:",
 
     optionMap: {
         css:        { short: "c", vals: [ ] },
@@ -26,6 +27,9 @@ var exp = {
     outfiles:  [ ],
     quietMode: false,
     verbosity: 0,
+
+    tests:     { },
+    testCount: 0,
 }
 
 
@@ -79,7 +83,16 @@ function main() {
     exp.verbosity = exp.optionMap.verbose.cnt;
 
     prepOutfiles();
+    analyzeTestData();
+    produceReports();
+}
 
+
+//==============================================================================
+//
+//==============================================================================
+
+function analyzeTestData() {
 
 }
 
@@ -235,4 +248,24 @@ function error(level, message, location = "EXPERIOR") {
     if(level == "fatal" && exp.debug < 2)
         this.process.exit(1);
 }
+
+/*
+
+    - prohibit simultaneous console and ansi output
+    - alternate @EXPERIOR: prefix
+    - sample test data
+    - analyze test data
+    - regression test
+    - output TXT
+    - output CSV
+    - output HTML
+
+{
+    id: "SOMENAME" (system will generate numeric id TESTnnnnn if omitted)
+
+
+*/
+
+
+
 
