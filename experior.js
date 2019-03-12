@@ -647,6 +647,7 @@ function error(level, message, location = "EXPERIOR") {
 
     - git-like command option for minicle
 
+    - text/ansi table generator
     - only failures/regressions switch
 
     - analyze test data
@@ -657,6 +658,10 @@ function error(level, message, location = "EXPERIOR") {
     - output ansi
     - output CSV
     - output HTML
+
+    - docs
+
+    - failure report
 {
     type: "begin"
     id: "SOMEGUID"
