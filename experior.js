@@ -9,6 +9,7 @@ var exp = {
     minicle:   require("minicle"),
     process:   require("process"),
     readline:  require("readline"),
+    table:     require("table"),
 
     version:   "0.0.1",
     formats:   [ "console", "ansi", "txt", "html", "csv", "json" ],
@@ -17,9 +18,11 @@ var exp = {
     optionMap: {
         css:        { short: "c", vals: [ ] },
         debug:      { short: "d", cnt: 0    },
+        failures:   { short: "f", cnt: 0    },
         help:       { short: "h", cnt: 0    },
         infile:     { short: "i", vals: [ ] },
         jstest:     { short: "j", vals: [ ] },
+        long:       { short: "l", cnt: 0    },
         msgprefix:  { short: "m", vals: [ ] },
         outfile:    { short: "o", vals: [ ] },
         prng:       { short: "p", vals: [ ] },
@@ -27,6 +30,7 @@ var exp = {
         regression: { short: "r", vals: [ ] },
         seed:       { short: "s", vals: [ ] },
         verbose:    { short: "v", cnt: 0    },
+        width:      { short: "w", vals: [ ] },
     },
     debug:        false,
     infiles:      [ ],
@@ -34,6 +38,10 @@ var exp = {
     quietMode:    false,
     verbosity:    0,
     regression:   false,
+    failOnly:     false,
+    descWidth:    0,
+    longFormat:   false,
+    jsTest:       false,
 
     tests:        { },   // results of each test, indexed by name
     testSequence: [ ],   // sorted list of test names
@@ -80,6 +88,18 @@ function main() {
 
     if(exp.optionMap.quiet.cnt)
         exp.quietMode = true;
+
+    if(exp.optionMap.failures.cnt)
+        exp.failOnly = true;
+
+    if(exp.optionMap.width.vals.length) {
+        exp.descWidth = parseInt(exp.optionMap.width.vals[0]);
+        if(isNaN(exp.descWidth) || exp.descWidth < 1)
+            error("fatal", "The width parameter must be greater than zero.", "main");
+    }
+
+    if(exp.optionMap.long.cnt)
+        exp.longFormat = true;
 
     // Have we been asked for PRNGs instead of a test run? ---------------------
 
@@ -380,24 +400,27 @@ function sortTests() {
 //==============================================================================
 
 function produceTestReports() {
+
+    var data = assembleReportData();
+
     for(var filename in exp.outfiles) {
         switch(exp.outfiles[filename].type) {
             case "console":
-                testReportConsole();
+                testReportConsole(data);
                 break;
             case "ansi":
-                testReportAnsi();
+                testReportAnsi(data);
                 break;
             case "txt":
-                testReportText(exp.outfiles[filename].fd);
+                testReportText(exp.outfiles[filename].fd, data);
                 exp.fs.closeSync(exp.outfiles[filename].fd);
                 break;
             case "csv":
-                testReportCSV(exp.outfiles[filename].fd);
+                testReportCSV(exp.outfiles[filename].fd, data);
                 exp.fs.closeSync(exp.outfiles[filename].fd);
                 break;
             case "html":
-                testReportHTML(exp.outfiles[filename].fd);
+                testReportHTML(exp.outfiles[filename].fd, data);
                 exp.fs.closeSync(exp.outfiles[filename].fd);
                 break;
             case "json":
@@ -407,6 +430,62 @@ function produceTestReports() {
         }
     }
 }
+
+
+//==============================================================================
+// Walks through exp.tests and assembles the data to go into the various report
+// formats in a single common format, which is an array of arrays. The first row
+// contains the column headers.
+//==============================================================================
+
+function assembleReportData() {
+    var rows = [ ];
+
+    var row = ["Test"];
+    if(exp.jsTest)
+        row.push("JS");
+    if(exp.regression)
+        row.push("Reg.");
+    row.push("Category");
+    row.push("Test ID");
+    row.push("Label");
+    if(exp.longFormat)
+        row.push("Test Description");
+    rows.push(row);
+
+    for(var i = 0; i < exp.testSequence.length; i++) {
+
+        var test = exp.tests[exp.testSequence[i]];
+        if(test.success && (test.regression === undefined || !test.regression) && exp.failOnly)
+            continue;
+
+        row = [ ];
+        row.push(test.success ? " ok " : "FAIL");
+        if(exp.jsTest) {
+            if(test.jsSuccess === undefined) {
+                row.push("n/a ");
+            } else if(test.jsSuccess === true) {
+                row.push(" ok ");
+            } else {
+                row.push("FAIL");
+            }
+        }
+        if(exp.regression) {
+            row.push(test.regression ? "FAIL" : " ok ");
+        }
+        row.push(test.cat);
+        row.push(test.id);
+        row.push(test.label);
+        if(exp.longFormat) {
+            row.push(test.desc);
+        }
+
+        rows.push(row);
+    }
+
+    return rows;
+}
+
 
 //==============================================================================
 // Walks through exp.tests and calculates the maximum width of each field.
@@ -431,48 +510,113 @@ function findFieldWidths() {
 
 //==============================================================================
 // These are the handlers for the various test report formats. All of them use
-// data stored in the global exp object and so require no arguments.
+// data output by assembleReportData.
 //==============================================================================
 
-function testReportConsole() {
-    if(exp.fieldWidths === null)
-        findFieldWidths();
+function testReportConsole(data) {
+    var columns = {
+        test:  { alignment: "center", minWidth: 4 },
+        js:    { alignment: "center", minWidth: 4 },
+        reg:   { alignment: "center", minWidth: 4 },
+        cat:   { alignment: "left" },
+        id:    { alignment: "left" },
+        label: { alignment: "left" },
+        desc:  { alignment: "left", wrapWord: true }
+    };
 
-    var lineWidth = 26 + Math.max(exp.fieldWidths.cat, "CATEGORY".length)
-        + Math.max(exp.fieldWidths.label, "TEST ID".length);
-        + Math.max(exp.fieldWidths.label, "LABEL".length);
+    if(exp.descWidth)
+        columns.desc.width = exp.descWidth;
 
-    console.log("+" + "".padEnd(lineWidth - 2, "-") + "+");
-    console.log("| TEST | "
-        + "CATEGORY".padEnd(exp.fieldWidths.cat) + " | "
-        + "TEST ID".padEnd(exp.fieldWidths.id) + " | "
-        + "LABEL".padEnd(exp.fieldWidths.label) + " |");
-    console.log("+" + "".padEnd(lineWidth - 2, "-") + "+");
+    var config = {
+        border: exp.table.getBorderCharacters("ramac"),
+        columns: { }
+    };
 
-    for(var i = 0; i < exp.testSequence.length; i++) {
-        var test = exp.tests[exp.testSequence[i]];
-        var status = test.success ? " ok " : "FAIL";
-        console.log("| " + status + " | "
-            + test.cat.padEnd(exp.fieldWidths.cat) + " | "
-            + test.id.padEnd(exp.fieldWidths.id) + " | "
-            + test.label.padEnd(exp.fieldWidths.label) + " |");
+    var col = 0;
+    config.columns[col++] = columns.test;
+    if(exp.jsTest)
+        config.columns[col++] = columns.js;
+    if(exp.regression)
+        config.columns[col++] = columns.reg;
+    config.columns[col++] = columns.cat;
+    config.columns[col++] = columns.id;
+    config.columns[col++] = columns.label;
+    if(exp.longFormat)
+        config.columns[col++] = columns.desc;
+
+    console.log(exp.table.table(data, config));
+}
+
+
+//------------------------------------------------------------------------------
+
+function testReportAnsi(data) {
+    for(var i = 0; i < data[0].length; i++)
+        data[0][i] = exp.ac.yellow.bold(data[0][i]);
+
+    var columns = {
+        test:  { alignment: "center", minWidth: 4 },
+        js:    { alignment: "center", minWidth: 4 },
+        reg:   { alignment: "center", minWidth: 4 },
+        cat:   { alignment: "left" },
+        id:    { alignment: "left" },
+        label: { alignment: "left" },
+        desc:  { alignment: "left", wrapWord: true }
+    };
+
+    if(exp.descWidth)
+        columns.desc.width = exp.descWidth;
+
+    var config = {
+        border: exp.table.getBorderCharacters("honeywell"),
+        columns: { }
+    };
+
+    for(var row = 0; row < data.length; row++) {
+        if(data[row][0] == "n/a ")
+            data[row][0] = exp.ac.blue(data[row][0]);
+        else if(data[row][0] == " ok ")
+            data[row][0] = exp.ac.bgGreen.white.bold(data[row][0]);
+        else if(data[row][0] == "FAIL")
+            data[row][0] = exp.ac.bgRed.yellow.bold(data[row][0]);
     }
 
-    console.log("+" + "".padEnd(lineWidth - 2, "-") + "+");
+    var col = 0;
+    config.columns[col++] = columns.test;
+    if(exp.jsTest) {
+        for(var row = 0; row < data.length; row++) {
+            if(data[row][col] == "n/a ")
+                data[row][col] = exp.ac.blue(data[row][col]);
+            else if(data[row][col] == " ok ")
+                data[row][col] = exp.ac.bgGreen.white.bold(data[row][col]);
+            else if(data[row][col] == "FAIL")
+                data[row][col] = exp.ac.bgRed.yellow.bold(data[row][col]);
+        }
+        config.columns[col++] = columns.js;
+    }
+    if(exp.regression) {
+        for(var row = 0; row < data.length; row++) {
+            if(data[row][col] == "n/a ")
+                data[row][col] = exp.ac.blue(data[row][col]);
+            else if(data[row][col] == " ok ")
+                data[row][col] = exp.ac.bgGreen.white.bold(data[row][col]);
+            else if(data[row][col] == "FAIL")
+                data[row][col] = exp.ac.bgRed.yellow.bold(data[row][col]);
+        }
+        config.columns[col++] = columns.reg;
+    }
+    config.columns[col++] = columns.cat;
+    config.columns[col++] = columns.id;
+    config.columns[col++] = columns.label;
+    if(exp.longFormat)
+        config.columns[col++] = columns.desc;
+
+    console.log(exp.table.table(data, config));
 }
 
 //------------------------------------------------------------------------------
 
-function testReportAnsi() {
-    if(exp.fieldWidths === null)
-        findFieldWidths();
-
-    error("debug", "Not implemented yet.", "testReportAnsi");
-}
-
-//------------------------------------------------------------------------------
-
-function testReportText(fd) {
+function testReportText(fd, data) {
     if(exp.fieldWidths === null)
         findFieldWidths();
 
@@ -501,20 +645,31 @@ function testReportText(fd) {
 
 //------------------------------------------------------------------------------
 
-function testReportCSV(fd) {
+function testReportCSV(fd, data) {
     error("debug", "Not implemented yet.", "testReportCSV");
 }
 
 //------------------------------------------------------------------------------
 
-function testReportHTML(fd) {
+function testReportHTML(fd, data) {
     error("debug", "Not implemented yet.", "testReportHTML");
 }
 
 //------------------------------------------------------------------------------
 
 function testReportJSON(fd) {
-    exp.fs.writeSync(fd, JSON.stringify(exp.tests));
+    var data = exp.tests;
+
+    if(exp.failOnly) {
+        data = { };
+        for(var id in exp.tests) {
+            if(exp.tests[id].success && (exp.tests[id].regression === undefined || !exp.tests[id].regression))
+                continue;
+            data[id] = exp.tests[id];
+        }
+    }
+
+    exp.fs.writeSync(fd, JSON.stringify(data));
 }
 
 
@@ -581,7 +736,10 @@ function usage() {
         + exp.ac.yellow.bold("    -r") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--regression ") + exp.ac.blue.bold("<filename>     ") + exp.ac.cyan.bold("Regression test input file.\n")
         + exp.ac.yellow.bold("    -j") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--jstest     ") + exp.ac.blue.bold("<filename>     ") + exp.ac.cyan.bold("JavaScript test module.\n")
         + exp.ac.yellow.bold("    -c") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--css        ") + exp.ac.blue.bold("<filename>     ") + exp.ac.cyan.bold("CSS file to use with HTML output.\n")
+        + exp.ac.yellow.bold("    -l") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--long       ") + exp.ac.blue.bold("               ") + exp.ac.cyan.bold("Use long report format.\n")
+        + exp.ac.yellow.bold("    -w") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--width      ") + exp.ac.blue.bold("<number>       ") + exp.ac.cyan.bold("Set width for text descriptions.\n")
         + exp.ac.yellow.bold("    -m") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--msgprefix  ") + exp.ac.blue.bold("<string>       ") + exp.ac.cyan.bold("Experior message prefix.\n")
+        + exp.ac.yellow.bold("    -f") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--failures   ") + exp.ac.blue.bold("               ") + exp.ac.cyan.bold("Only show failures in reports.\n")
         + exp.ac.yellow.bold("    -p") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--prng       ") + exp.ac.blue.bold("<type> <num>   ") + exp.ac.cyan.bold("Generate num random numbers of type.\n")
         + exp.ac.yellow.bold("    -s") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--seed       ") + exp.ac.blue.bold("<num|string>   ") + exp.ac.cyan.bold("Explicit PRNG seed.\n")
         + exp.ac.yellow.bold("    -v") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--verbose    ") + exp.ac.blue.bold("               ") + exp.ac.cyan.bold("Increase verbosity (starts at 1, up to 4).\n")
@@ -644,11 +802,6 @@ function error(level, message, location = "EXPERIOR") {
 
 /*
 
-    - git-like command option for minicle
-
-    - only failures/regressions switch
-    - console/ansi/text width option
-
     - analyze test data
       -- totals by category and whole set
       -- text-table using table module
@@ -661,8 +814,8 @@ function error(level, message, location = "EXPERIOR") {
     - docs
     - cleanup
 
-    - failure report
-
+    - git-like command option for minicle
+    - minicle-usage using table
 
 {
     type: "begin"
