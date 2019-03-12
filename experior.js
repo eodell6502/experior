@@ -1,12 +1,14 @@
+var File = require("./lib/file.js");
+
 var exp = {
 
     ac:        require("ansi-colors"),
-    fgets:     require('qfgets'),
     fs:        require("fs"),
     isaac:     require("isaac"),
     md5:       require('md5'),
     minicle:   require("minicle"),
     process:   require("process"),
+    readline:  require("readline"),
 
     version:   "0.0.1",
     formats:   [ "console", "ansi", "txt", "html", "csv" ],
@@ -31,8 +33,10 @@ var exp = {
     quietMode: false,
     verbosity: 0,
 
-    tests:     { },
-    testCount: 0,
+    tests:        { },   // results of each test, indexed by name
+    testSequence: [ ],   // sorted list of test names
+    testCount:    0,     // count of tests
+    fieldWidths:  null,  // width of report fields for console/ansi
 }
 
 
@@ -61,6 +65,19 @@ function main() {
     if(exp.optionMap.help.cnt)
         usage(); // exits
 
+
+    // Set other config values -------------------------------------------------
+
+    if(exp.optionMap.debug.cnt) {
+        exp.debug     = true;
+        exp.verbosity = 4;
+    } else {
+        exp.verbosity = exp.optionMap.verbose.cnt;
+    }
+
+    if(exp.optionMap.quiet.cnt)
+        exp.quietMode = true;
+
     // Have we been asked for PRNGs instead of a test run? ---------------------
 
     if(exp.optionMap.prng.vals.length == 2) {
@@ -86,6 +103,10 @@ function main() {
         error("fatal", "At least one output file must be specified.", "main");
     exp.outfiles = exp.optionMap.outfile.vals;
 
+    error("debug", "exp.outfiles = ", "main");
+    if(exp.debug)
+        console.log(exp.outfiles);
+
     if(exp.optionMap.msgprefix.vals.length)
         exp.prefix = exp.optionMap.msgprefix.vals[0];
 
@@ -93,7 +114,8 @@ function main() {
 
     prepOutfiles();
     analyzeTestData();
-    //produceReports();
+    sortTests();
+    produceTestReports();
 }
 
 
@@ -101,30 +123,6 @@ function main() {
 // Reads the infile(s), looking for the message prefix and acting accordingly.
 // Content before the first test instruction is ignored.
 //==============================================================================
-
-/*
-
-https://www.npmjs.com/package/qfgets
-
-    // line-at-a-time file reader
-    function readfile(filename, callback) {
-        var fp = new Fgets(filename);
-        var contents = "";
-        return readlines();
-
-        function readlines() {
-            try {
-                for (var i=0; i<20; i++) contents += fp.fgets();
-                if (fp.feof()) return callback(null, contents);
-                else setImmediate(readlines);
-            }
-            catch (err) {
-                return callback(err);
-            }
-        }
-    }
-
-*/
 
 function analyzeTestData() {
     var prefixLength = exp.prefix.length;
@@ -135,25 +133,26 @@ function analyzeTestData() {
 
     for(var f = 0; f < exp.infiles.length; f++) {
 
-        var fp = new exp.fgets(exp.infiles[f]);
-        if(fp.fp.fd === null)
+        var fp = new File(exp.infiles[f], "r");
+        if(!fp.open)
             error("fatal", "Unable to open input file " + exp.infiles[f] + " for reading.", "analyzeTestData");
+        var lines = fp.read();
+        fp.close();
+        lines = lines.split(/\n/);
 
         // Iterate through lines in file ---------------------------------------
 
         var testData   = [ ];
         var lineNumber = -1;
 
-        while(!fp.feof()) {
+        while(lines.length) {
 
+            var line = lines.shift();
             lineNumber++;
-            var line = fp.fgets();
-            if(line === "")         // wait for buffer to fill
-                continue;
 
             if(line.length >= prefixLength && line.substr(0, prefixLength) == exp.prefix) {
 
-                try { var msg = JSON.parse(line); } catch(e) {
+                try { var msg = JSON.parse(line.substr(prefixLength).trim()); } catch(e) {
                     error("fatal", "Malformed JSON message in " + exp.infiles[f] + " at line " + lineNumber, "analyzeTestData");
                 }
                 if(msg.type === undefined)
@@ -161,7 +160,7 @@ function analyzeTestData() {
 
                 if(msg.type == "begin") {
 
-                    if(currentTest === null)
+                    if(currentTest !== null)
                         error("fatal", "JSON begin message in middle of test in " + exp.infiles[f] + " at line " + lineNumber, "analyzeTestData");
 
                     if(msg.id === undefined)
@@ -183,6 +182,7 @@ function analyzeTestData() {
                     // TODO: msg.jstest validate
 
                     currentTest = { id: msg.id, cat: msg.cat, label: msg.label, desc: msg.desc };
+                    testData = [ ];
 
                 } else if(msg.type == "end") {
 
@@ -195,6 +195,9 @@ function analyzeTestData() {
                         error("fatal", "JSON end message with missing success in " + exp.infiles[f] + " at line " + lineNumber, "analyzeTestData");
 
                     currentTest.success = msg.success;
+                    var testBlob        = testData.join("\n");
+                    currentTest.hash    = exp.md5(testBlob);
+                    currentTest.size    = testBlob.length;
 
                     // TODO: apply jstests
                     //    blah blah blah msg.jsResults
@@ -206,7 +209,11 @@ function analyzeTestData() {
                 }
 
 
-            } else {
+            } else { // test data and interstitial lines
+
+                if(currentTest != null) {
+                    testData.push(line);
+                }
 
             }
 
@@ -214,7 +221,9 @@ function analyzeTestData() {
 
     }
 
-
+    error("debug", "exp.tests = ", "analyzeTestData");
+    if(exp.debug)
+        console.log(exp.tests);
 }
 
 
@@ -255,6 +264,169 @@ function prepOutfiles() {
     }
 
     exp.outfiles = result;
+
+    error("debug", "exp.outfiles = ", "prepOutFiles");
+    if(exp.debug)
+        console.log(exp.outfiles);
+
+}
+
+//==============================================================================
+// Creates a list of test names sorted by category and label.
+//==============================================================================
+
+function sortTests() {
+
+    for(var k in exp.tests)
+        exp.testSequence.push([exp.tests[k].cat, k]);
+
+    exp.testSequence.sort(function(a, b) {
+        if(a[0] == b[0])
+            return a[1].localeCompare(b[1]);
+        else
+            return a[0].localeCompare(b[0]);
+    });
+
+    for(var i = 0; i < exp.testSequence.length; i++)
+        exp.testSequence[i] = exp.testSequence[i][1];
+
+    error("debug", "exp.testSequence = ", "sortTests");
+    if(exp.debug)
+        console.log(exp.testSequence);
+}
+
+
+
+
+//==============================================================================
+// Just steps through exp.outfiles and dispatches the various output format
+// handlers.
+//==============================================================================
+
+function produceTestReports() {
+    for(var filename in exp.outfiles) {
+        switch(exp.outfiles[filename].type) {
+            case "console":
+                testReportConsole();
+                break;
+            case "ansi":
+                testReportAnsi();
+                break;
+            case "txt":
+                testReportText(exp.outfiles[filename].fd);
+                break;
+            case "csv":
+                testReportCSV(exp.outfiles[filename].fd);
+                break;
+            case "html":
+                testReportHTML(exp.outfiles[filename].fd);
+                break;
+        }
+    }
+}
+
+//==============================================================================
+// Walks through exp.tests and calculates the maximum width of each field.
+//==============================================================================
+
+function findFieldWidths() {
+    exp.fieldWidths = { };
+    for(var testname in exp.tests) {
+        for(var fieldname in exp.tests[testname]) {
+            if(exp.fieldWidths[fieldname] === undefined)
+                exp.fieldWidths[fieldname] = 0;
+            var len = exp.tests[testname][fieldname].toString().length;
+            if(len > exp.fieldWidths[fieldname])
+                exp.fieldWidths[fieldname] = len;
+        }
+    }
+
+    error("debug", "exp.fieldWidths = ", "findFieldWidths");
+    if(exp.debug)
+        console.log(exp.fieldWidths);
+}
+
+
+//==============================================================================
+// These are the handlers for the various test report formats. All of them use
+// data stored in the global exp object and so require no arguments.
+//==============================================================================
+
+function testReportConsole() {
+    if(exp.fieldWidths === null)
+        findFieldWidths();
+
+    var lineWidth = 26 + Math.max(exp.fieldWidths.cat, "CATEGORY".length)
+        + Math.max(exp.fieldWidths.label, "TEST ID".length);
+        + Math.max(exp.fieldWidths.label, "LABEL".length);
+
+    console.log("+" + "".padEnd(lineWidth - 2, "-") + "+");
+    console.log("| TEST | "
+        + "CATEGORY".padEnd(exp.fieldWidths.cat) + " | "
+        + "TEST ID".padEnd(exp.fieldWidths.id) + " | "
+        + "LABEL".padEnd(exp.fieldWidths.label) + " |");
+    console.log("+" + "".padEnd(lineWidth - 2, "-") + "+");
+
+    for(var i = 0; i < exp.testSequence.length; i++) {
+        var test = exp.tests[exp.testSequence[i]];
+        var status = test.success ? " ok " : "FAIL";
+        console.log("| " + status + " | "
+            + test.cat.padEnd(exp.fieldWidths.cat) + " | "
+            + test.id.padEnd(exp.fieldWidths.id) + " | "
+            + test.label.padEnd(exp.fieldWidths.label) + " |");
+    }
+
+    console.log("+" + "".padEnd(lineWidth - 2, "-") + "+");
+}
+
+//------------------------------------------------------------------------------
+
+function testReportAnsi() {
+    if(exp.fieldWidths === null)
+        findFieldWidths();
+
+    error("debug", "Not implemented yet.", "testReportAnsi");
+}
+
+//------------------------------------------------------------------------------
+
+function testReportText(fd) {
+    if(exp.fieldWidths === null)
+        findFieldWidths();
+
+    var lineWidth = 26 + Math.max(exp.fieldWidths.cat, "CATEGORY".length)
+        + Math.max(exp.fieldWidths.label, "TEST ID".length);
+        + Math.max(exp.fieldWidths.label, "LABEL".length);
+
+    exp.fs.writeSync(fd, "+" + "".padEnd(lineWidth - 2, "-") + "+\n");
+    exp.fs.writeSync(fd, "| TEST | "
+        + "CATEGORY".padEnd(exp.fieldWidths.cat) + " | "
+        + "TEST ID".padEnd(exp.fieldWidths.id) + " | "
+        + "LABEL".padEnd(exp.fieldWidths.label) + " |\n");
+    exp.fs.writeSync(fd, "+" + "".padEnd(lineWidth - 2, "-") + "+\n");
+
+    for(var i = 0; i < exp.testSequence.length; i++) {
+        var test = exp.tests[exp.testSequence[i]];
+        var status = test.success ? " ok " : "FAIL";
+        exp.fs.writeSync(fd, "| " + status + " | "
+            + test.cat.padEnd(exp.fieldWidths.cat) + " | "
+            + test.id.padEnd(exp.fieldWidths.id) + " | "
+            + test.label.padEnd(exp.fieldWidths.label) + " |\n");
+    }
+
+    exp.fs.writeSync(fd, "+" + "".padEnd(lineWidth - 2, "-") + "+\n");
+}
+
+//------------------------------------------------------------------------------
+
+function testReportCSV(fd) {
+    error("debug", "Not implemented yet.", "testReportCSV");
+}
+
+//------------------------------------------------------------------------------
+
+function testReportHTML(fd) {
+    error("debug", "Not implemented yet.", "testReportHTML");
 }
 
 
@@ -379,6 +551,8 @@ function error(level, message, location = "EXPERIOR") {
         this.process.exit(1);
 }
 
+
+
 /*
 
     - sample test data
@@ -400,6 +574,24 @@ function error(level, message, location = "EXPERIOR") {
     id: "TESTGUID",   -- must match current test
     success: boolean
 }
+
+
+@EXPERIOR: {"type":"begin","id":"TestOne","cat":"testdata","label":"Some even numbers","desc":"This is a bunch of even numbers."}
+
+2 4 6 8 10 12 14 16 18 20
+
+@EXPERIOR: {"type":"end","id":"TestOne","success":true }
+
+@EXPERIOR: {"type":"begin","id":"TestTwo","cat":"testdata","label":"Some odd numbers","desc":"This is a bunch of odd numbers."}
+
+1 3 5 7 9 11 13 15 17 19 21
+
+@EXPERIOR: {"type":"end","id":"TestTwo","success":true }
+@EXPERIOR: {"type":"begin","id":"TestThree","cat":"testdata","label":"Some negative numbers","desc":"This is a bunch of negative numbers."}
+
+1 2 3 4 5 6 7 8 9 10
+
+@EXPERIOR: {"type":"end","id":"TestThree","success":false }
 
 */
 
