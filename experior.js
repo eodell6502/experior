@@ -429,7 +429,6 @@ function findFieldWidths() {
         console.log(exp.fieldWidths);
 }
 
-
 //==============================================================================
 // These are the handlers for the various test report formats. All of them use
 // data stored in the global exp object and so require no arguments.
@@ -647,12 +646,12 @@ function error(level, message, location = "EXPERIOR") {
 
     - git-like command option for minicle
 
-    - text/ansi table generator
     - only failures/regressions switch
+    - console/ansi/text width option
 
     - analyze test data
       -- totals by category and whole set
-      -- text-table function
+      -- text-table using table module
 
     - option to include descriptions in text/console
     - output ansi
@@ -660,8 +659,11 @@ function error(level, message, location = "EXPERIOR") {
     - output HTML
 
     - docs
+    - cleanup
 
     - failure report
+
+
 {
     type: "begin"
     id: "SOMEGUID"
