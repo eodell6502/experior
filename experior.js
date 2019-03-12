@@ -24,19 +24,22 @@ var exp = {
         outfile:    { short: "o", vals: [ ] },
         prng:       { short: "p", vals: [ ] },
         quiet:      { short: "q", cnt: 0    },
+        regression: { short: "r", vals: [ ] },
         seed:       { short: "s", vals: [ ] },
         verbose:    { short: "v", cnt: 0    },
     },
-    debug:     false,
-    infiles:   [ ],
-    outfiles:  [ ],
-    quietMode: false,
-    verbosity: 0,
+    debug:        false,
+    infiles:      [ ],
+    outfiles:     [ ],
+    quietMode:    false,
+    verbosity:    0,
+    regression:   false,
 
     tests:        { },   // results of each test, indexed by name
     testSequence: [ ],   // sorted list of test names
     testCount:    0,     // count of tests
     fieldWidths:  null,  // width of report fields for console/ansi
+    summary:      { },   // to be filled with totals, stats, etc.
 }
 
 
@@ -99,6 +102,12 @@ function main() {
         error("fatal", "At least one input file must be specified.", "main");
     exp.infiles = exp.optionMap.infile.vals;
 
+    if(exp.optionMap.regression.vals.length) {
+        exp.regression = new File(exp.optionMap.regression.vals[0], "r");
+        if(!exp.regression.open)
+            error("fatal", "Unable to open regression file " + exp.optionMap.regression.vals[0] + ".", "main");
+    }
+
     if(!exp.optionMap.outfile.vals.length)
         error("fatal", "At least one output file must be specified.", "main");
     exp.outfiles = exp.optionMap.outfile.vals;
@@ -110,12 +119,81 @@ function main() {
     if(exp.optionMap.msgprefix.vals.length)
         exp.prefix = exp.optionMap.msgprefix.vals[0];
 
-    exp.verbosity = exp.optionMap.verbose.cnt;
-
     prepOutfiles();
     analyzeTestData();
+    if(exp.regression)
+        findRegressions();
     sortTests();
+    createSummary();
     produceTestReports();
+}
+
+
+//==============================================================================
+// Creates totals and stats.
+//==============================================================================
+
+function createSummary() {
+    var result = {
+        tests:      0,
+        failed:     0,
+        failPct:    0,
+        succeeded:  0,
+        successPct: 0,
+        regressed:  0,
+        regressPct: 0,
+    };
+
+    for(var k in exp.tests) {
+        test = exp.tests[k];
+        result.tests++;
+        if(test.success)
+            result.succeeded++;
+        else
+            result.failed++;
+        if(test.regression !== undefined && test.regression)
+            result.regressed++;
+    }
+
+    if(result.tests) { // avoid division by zero
+        result.failPct    = ((result.failed    / result.tests) * 100).toFixed(1);
+        result.successPct = ((result.succeeded / result.tests) * 100).toFixed(1);
+        result.regressPct = ((result.regressed / result.tests) * 100).toFixed(1);
+    }
+
+    exp.summary = result;
+
+    error("debug", "exp.summary = ", "createSummary");
+    if(exp.debug)
+        console.log(exp.summary);
+}
+
+
+//==============================================================================
+// Loads the regression file and flags regressions in exp.tests and flags
+// the regressions. Must be run after analyzeTestData.
+//==============================================================================
+
+function findRegressions() {
+    var old = exp.regression.read();
+    try {
+        old = JSON.parse(old);
+    } catch(e) {
+        error("fatal", "Unable to parse JSON in regression file.", "findRegressions");
+    }
+
+    for(var test in old) {
+        if(exp.tests[test] === undefined) {
+            error("warn", "Test " + test + " is present in regression file but not current test file.", "findRegression");
+        } else {
+            exp.tests[test].regression = old[test].hash == exp.tests[test].hash ? false : true;
+        }
+    }
+    exp.regression.close();
+
+    error("debug", "exp.tests = ", "findRegressions");
+    if(exp.debug)
+        console.log(exp.tests);
 }
 
 
@@ -216,9 +294,7 @@ function analyzeTestData() {
                 }
 
             }
-
         }
-
     }
 
     error("debug", "exp.tests = ", "analyzeTestData");
@@ -314,18 +390,21 @@ function produceTestReports() {
                 break;
             case "txt":
                 testReportText(exp.outfiles[filename].fd);
+                exp.fs.closeSync(exp.outfiles[filename].fd);
                 break;
             case "csv":
                 testReportCSV(exp.outfiles[filename].fd);
+                exp.fs.closeSync(exp.outfiles[filename].fd);
                 break;
             case "html":
                 testReportHTML(exp.outfiles[filename].fd);
+                exp.fs.closeSync(exp.outfiles[filename].fd);
                 break;
             case "json":
                 testReportJSON(exp.outfiles[filename].fd);
+                exp.fs.closeSync(exp.outfiles[filename].fd);
                 break;
         }
-        exp.fs.closeSync(exp.outfiles[filename].fd);
     }
 }
 
@@ -500,6 +579,7 @@ function usage() {
     console.log(exp.ac.white.bold("  Usage: experior [options]\n\n")
         + exp.ac.yellow.bold("    -i") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--infile     ") + exp.ac.blue.bold("<filename(s)>  ") + exp.ac.cyan.bold("Path to input file(s).\n")
         + exp.ac.yellow.bold("    -o") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--outfile    ") + exp.ac.blue.bold("<filename(s)>  ") + exp.ac.cyan.bold("Output file names.\n")
+        + exp.ac.yellow.bold("    -r") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--regression ") + exp.ac.blue.bold("<filename>     ") + exp.ac.cyan.bold("Regression test input file.\n")
         + exp.ac.yellow.bold("    -j") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--jstest     ") + exp.ac.blue.bold("<filename>     ") + exp.ac.cyan.bold("JavaScript test module.\n")
         + exp.ac.yellow.bold("    -c") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--css        ") + exp.ac.blue.bold("<filename>     ") + exp.ac.cyan.bold("CSS file to use with HTML output.\n")
         + exp.ac.yellow.bold("    -m") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--msgprefix  ") + exp.ac.blue.bold("<string>       ") + exp.ac.cyan.bold("Experior message prefix.\n")
@@ -567,13 +647,14 @@ function error(level, message, location = "EXPERIOR") {
 
     - git-like command option for minicle
 
+    - only failures/regressions switch
+
     - analyze test data
       -- totals by category and whole set
-    - regression test
+      -- text-table function
 
     - option to include descriptions in text/console
     - output ansi
-    - output TXT
     - output CSV
     - output HTML
 {
