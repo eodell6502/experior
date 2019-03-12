@@ -11,7 +11,7 @@ var exp = {
     readline:  require("readline"),
 
     version:   "0.0.1",
-    formats:   [ "console", "ansi", "txt", "html", "csv" ],
+    formats:   [ "console", "ansi", "txt", "html", "csv", "json" ],
     prefix:    "@EXPERIOR:",
 
     optionMap: {
@@ -321,7 +321,11 @@ function produceTestReports() {
             case "html":
                 testReportHTML(exp.outfiles[filename].fd);
                 break;
+            case "json":
+                testReportJSON(exp.outfiles[filename].fd);
+                break;
         }
+        exp.fs.closeSync(exp.outfiles[filename].fd);
     }
 }
 
@@ -427,6 +431,12 @@ function testReportCSV(fd) {
 
 function testReportHTML(fd) {
     error("debug", "Not implemented yet.", "testReportHTML");
+}
+
+//------------------------------------------------------------------------------
+
+function testReportJSON(fd) {
+    exp.fs.writeSync(fd, JSON.stringify(exp.tests));
 }
 
 
