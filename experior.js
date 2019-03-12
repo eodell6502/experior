@@ -555,9 +555,14 @@ function error(level, message, location = "EXPERIOR") {
 
 /*
 
-    - sample test data
+    - git-like command option for minicle
+
     - analyze test data
+      -- totals by category and whole set
     - regression test
+
+    - option to include descriptions in text/console
+    - output ansi
     - output TXT
     - output CSV
     - output HTML
