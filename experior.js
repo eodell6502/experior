@@ -32,16 +32,17 @@ var exp = {
         verbose:    { short: "v", cnt: 0    },
         width:      { short: "w", vals: [ ] },
     },
+    css:          false,
     debug:        false,
+    descWidth:    0,
+    failOnly:     false,
     infiles:      [ ],
+    jsTest:       false,
+    longFormat:   false,
     outfiles:     [ ],
     quietMode:    false,
-    verbosity:    0,
     regression:   false,
-    failOnly:     false,
-    descWidth:    0,
-    longFormat:   false,
-    jsTest:       false,
+    verbosity:    0,
 
     tests:        { },   // results of each test, indexed by name
     testSequence: [ ],   // sorted list of test names
@@ -101,6 +102,9 @@ function main() {
     if(exp.optionMap.long.cnt)
         exp.longFormat = true;
 
+    if(exp.optionMap.css.vals.length)
+        exp.css = exp.optionMap.css.vals[0];
+
     // Have we been asked for PRNGs instead of a test run? ---------------------
 
     if(exp.optionMap.prng.vals.length == 2) {
@@ -123,9 +127,11 @@ function main() {
     exp.infiles = exp.optionMap.infile.vals;
 
     if(exp.optionMap.regression.vals.length) {
-        exp.regression = new File(exp.optionMap.regression.vals[0], "r");
-        if(!exp.regression.open)
+        try {
+            exp.regression = new File(exp.optionMap.regression.vals[0], "r");
+        } catch(e) {
             error("fatal", "Unable to open regression file " + exp.optionMap.regression.vals[0] + ".", "main");
+        }
     }
 
     if(!exp.optionMap.outfile.vals.length)
@@ -687,10 +693,8 @@ function testReportAnsi(data, summary) {
 //------------------------------------------------------------------------------
 
 function testReportText(fd, data, summary) {
-
     var content = testReportConsole(data, true);
     exp.fs.writeSync(fd, content);
-
 }
 
 //------------------------------------------------------------------------------
@@ -721,15 +725,115 @@ function csvify(data) {
 //------------------------------------------------------------------------------
 
 function testReportHTML(fd, data, summary) {
-/*
 
-<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8">
+    exp.fs.writeSync(fd,
+        "<!doctype html>\n"
+        + "<html><head><meta charset=\"utf-8\">\n"
+        + "<title>Experior Test Results</title>\n"
+    );
+    if(exp.css) {
+        exp.fs.writeSync(fd, "<link href=\"" + exp.css + "\" rel=\"stylesheet\" type=\"text/css\" />\n");
+    } else {
+        exp.fs.writeSync(fd,
+            "<style type='text/css'>\n"
+            + "body,table { font: 10pt Arial,Helvetica,sans-serif; }\n"
+            + "table.sgrid { margin-top: 0.5em; border-collapse: collapse; }\n"
+            + "table.sgrid > thead { background-color: #263E4F;  color: white; }\n"
+            + "table.sgrid > td { padding-left: 0.5em; padding-right: 0.5em; vertical-align: top; }\n"
+            + "table.sgrid td { border: 0.25pt solid black; }\n"
+            + "table.sgrid th { background-color: #3C607B; border: 0.25pt solid black; }\n"
+            + "table.sgrid td { padding-left: 0.25em; padding-right: 0.25em; }\n"
+            + "table.sgrid td.success { color: white; background-color: #0A0; text-align: center; }\n"
+            + "table.sgrid td.failure { color: yellow; background-color: #A00; text-align: center; font-weight: bold; }\n"
+            + "table.sgrid td.category { font-weight: bold; }\n"
+            + "table.sgrid td.testId { font-weight: bold; }\n"
+            + "table.sgrid td.failed { background-color: #FDD; }\n"
+            + "table.sgrid td.num { text-align: right; }\n"
+            + "</style>\n"
+        );
+    }
+    exp.fs.writeSync(fd,
+        "</head>\n"
+        + "<body>\n"
+        + "<h1>Experior Test Results</h1>\n"
+        + "<h2>Test Results</h2>\n"
+        + "<table class=\"sgrid\" id=\"testResults\">\n"
+        + "<thead>\n"
+    );
 
-*/
-    error("debug", "Not implemented yet.", "testReportHTML");
+    var headerRow = data.shift();
+    exp.fs.writeSync(fd,
+        "<tr><th>" + headerRow.join("</th><th>") + "</th></tr>\n"
+        + "</thead>\n"
+        + "<tbody>\n"
+    );
+
+    for(var row = 0; row < data.length; row++) {
+        var failed = false;
+
+        for(var col = 0; col < data[row].length; col++) {
+            var datum = data[row][col].toString().trim();
+            var classItem = "";
+
+            if(datum == "FAIL") {
+                classItem = " class=\"failure\"";
+                failed = true;
+            } else if(datum == "ok") {
+                classItem = " class=\"success\"";
+            } else if(headerRow[col] == "Category") {
+                classItem = " class=\"category\"";
+            } else if(headerRow[col] == "Test ID") {
+                classItem = " class=\"testID\"";
+            }
+
+            // You know that point when you're almost finished with a lot of code
+            // and the last thing you do makes it painfully clear that you should
+            // go back and refactor all of it? This conditional is where that
+            // happens here.
+
+            if(failed && headerRow[col] != "Test" && headerRow[col] != "Reg." && headerRow[col] != "JS") {
+                if(classItem.length) {
+                    classItem = classItem.substr(0, classItem.length - 1);
+                    classItem += " failed\"";
+                } else {
+                    classItem = " class=\"failed\"";
+                }
+            }
+
+            datum = "<td" + classItem + ">" + datum + "</td>";
+            data[row][col] = datum;
+        }
+        exp.fs.writeSync(fd,
+            "<tr>" + data[row].join("") + "</td></tr>\n"
+        );
+    }
+
+    exp.fs.writeSync(fd,
+        "</tbody>\n"
+        + "</table>\n"
+        + "<h2>Summary</h2>\n"
+        + "<table class=\"sgrid\" id=\"testSummary\">\n"
+        + "<tbody>\n"
+    );
+
+    var sstyle = {
+        "Total Tests:": "font-weight: bold; color: #000; background-color: #FFF;",
+        "Succeeded:":   "font-weight: bold; color: #FFF; background-color: #0A0;",
+        "Failed:":      "font-weight: bold; color: #FF0; background-color: #A00;",
+        "Regressions:": "font-weight: bold; color: #000; background-color: #FF0;",
+    };
+
+    for(var row = 0; row < summary.length; row++) {
+        exp.fs.writeSync(fd, "<tr>"
+            + "<td style=\"" + sstyle[summary[row][0]] + "\">" + summary[row][0] + "</td>"
+            + "<td class='num'>" + summary[row][1] + "</td>"
+            + "<td class='num'>" + summary[row][2] + "</td>"
+            + "</tr>\n"
+        );
+    }
+
+    exp.fs.writeSync(fd, "</tbody>\n</table>\n</body>\n</html>\n");
+
 }
 
 //------------------------------------------------------------------------------
@@ -879,12 +983,10 @@ function error(level, message, location = "EXPERIOR") {
 
 /*
 
-    - analyze test data
-      -- [totals by category] and whole set
-
-    - output HTML
+    - JS tests
 
     - docs
+    - totals by category
     - cleanup
 
     - git-like command option for minicle
