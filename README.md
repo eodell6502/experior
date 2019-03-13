@@ -5,14 +5,20 @@
 
 ## Overview
 
-Experior is a Node-based command-line tool, not a library or framework. It takes 
-specially marked-up test output from your test program which may have performed 
-its own tests and included the results, and it generates reports in various 
-formats from that. It can also apply tests written in JavaScript to the test 
-output. Both types of tests can be used at the same time.
+Experior is command-line tool, not a library or framework. It takes specially 
+marked-up test output from your test program which may have performed its own 
+tests and included the results, and it generates reports in various formats from 
+that. It can also apply tests written in JavaScript to the test output. Both 
+types of tests can be used at the same time.
 
 It can also emit a JSON file containing test IDs and the MD5 hashes derived from 
 the test output. This can be re-used on subsequent runs to detect regressions.
+
+Experior doesn't care how you are creating and running your tests, what language 
+they are in, or what their output looks like. All it cares is that the test 
+output is wrapped in a simple, standardized format. You _can_ write tests in 
+JavaScript for Experior to apply to the test output, but this is entirely 
+optional.
 
 Full details are below, including a tutorial with examples.
 
@@ -175,11 +181,23 @@ to go.
 
 ## Regression Tests
 
-...
+Regression tests are fundamentally simple. Your tests produce enough output to 
+thoroughly exercise the code under test, and when you have a successful test, 
+you use Experior to output a summary as a JSON file and save it for future use.
+
+The JSON test summary contains an MD5 hash of the test output, so when you 
+re-run your tests to produce a new input file, you can use the `-r` or 
+`--regression` switch to reload your old test summary. Experior will then 
+compare the old MD5 hashes to the new ones and flag tests with regressions in 
+the reports.
 
 ## JavaScript Tests
 
-...
+Without getting into JavaScript tests, Experior expects you to write your own 
+tests however you want. You could be writing a C++ program to exercise a library 
+written in C. You could be using a scripting language with one of those 
+`stupid(frameworks).with(pseudoEnglish).syntax`. Like the honey badger, Experior
+don't care. You do your tests, write the 
 
 ## Tutorial and Examples
 
