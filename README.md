@@ -120,7 +120,16 @@ can be either a number or a string.
 
 ## Test File Format
 
-...
+Test files consist of test output beginning and ending with specially-marked messages
+to Experior. These messages begin with a standard prefix at the beginning of the line. The
+default prefix is `@EXPERIOR:`, but you can choose your own with the `--msgprefix` command
+line switch. The prefix is followed by a JSON string containing the test parameters.
+
+The message at the beginning of each test looks like this:
+
+```
+@EXPERIOR: {"type":"begin","id":"TestOne","cat":"testdata","label":"A 100% successful test","desc":"This is to test total success.","jsTest":"hasNoAlpha"}
+```
 
 ## Output Formats
 
