@@ -131,6 +131,44 @@ The message at the beginning of each test looks like this:
 @EXPERIOR: {"type":"begin","id":"TestOne","cat":"testdata","label":"A 100% successful test","desc":"This is to test total success.","jsTest":"hasNoAlpha"}
 ```
 
+And yes, it does have to be on one line, but let's look at a more human-readable
+version of the JSON data:
+
+```javascript
+{ 
+    type: 'begin',
+    id: 'TestOne',
+    cat: 'testdata',
+    label: 'A 100% successful test',
+    desc: 'This is to test total success.',
+    jsTest: 'hasNoAlpha' 
+}
+```
+
+The `type` attribute can have one of two values, `'begin'` or `'end'`; at the 
+beginning of a test block, it will obviously be `'begin'`. The `id` attribute 
+supplies a unique identifier for the test. You can group tests by supplying a 
+category name in the `cat` attribute. (Report results are sorted by category and 
+then identifier.) The `label` attribute is a short, human readable title for the 
+test which appears on all reports. The `desc` attribute can be used for a more 
+detailed description which only appears on the long version of reports. Finally, 
+the optional `jsTest` attribute is either a string naming a JavaScript test 
+function or an array of test function names.
+
+Everything after the `begin` message is test output until the closing `end` 
+message, which looks like this:
+
+```
+@EXPERIOR: {"type":"end","id":"TestOne","success":true }
+```
+
+Aside from `type`, which is `end` this time, and `id`, which is a repeat of the 
+test identifier, the only other attribute is `success`, which contains a boolean 
+indicating whether the test succeeded or not.
+
+And that's it. If you can get your test program to crank that out, you're ready 
+to go.
+
 ## Output Formats
 
 ...
@@ -150,4 +188,5 @@ The message at the beginning of each test looks like this:
 ## Status
 
 Experior is currently in beta as of 3/13/2019. In a week or so, when I'm done 
-testing it to my satisfaction, it will 
+testing it to my satisfaction, it will be bumped up to 1.0.0 and published to 
+the NPMjs repository.

@@ -1037,6 +1037,7 @@ function error(level, message, location = "EXPERIOR") {
     - docs
     - totals by category
     - cleanup
+    - test missing end msg
 
     - git-like command option for minicle
     - minicle-usage using table
