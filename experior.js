@@ -853,8 +853,7 @@ function error(level, message, location = "EXPERIOR") {
 /*
 
     - analyze test data
-      -- totals by category and whole set
-      -- text-table using table module
+      -- [totals by category] and whole set
 
     - option to include descriptions in text/console
     - output ansi
