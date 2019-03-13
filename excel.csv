@@ -1,0 +1,10 @@
+Test,Reg.,Category,"Test ID",Label,"Test Description"
+ok,ok,testdata,TestOne,"Some even numbers","This is a bunch of even numbers."
+FAIL,ok,testdata,TestThree,"Some negative numbers","This is a bunch of negative numbers."
+ok,ok,testdata,TestTwo,"Some odd numbers","This is a bunch of odd numbers."
+
+SUMMARY:
+"Total Tests:",3,100.0%
+Succeeded:,2,66.7%
+Failed:,1,33.3%
+Regressions:,0,0.0%

@@ -696,12 +696,39 @@ function testReportText(fd, data, summary) {
 //------------------------------------------------------------------------------
 
 function testReportCSV(fd, data, summary) {
-    error("debug", "Not implemented yet.", "testReportCSV");
+    exp.fs.writeSync(fd, csvify(data));
+    exp.fs.writeSync(fd, "\n\nSUMMARY:\n");
+    exp.fs.writeSync(fd, csvify(summary));
+}
+
+function csvify(data) {
+    var quotable = RegExp("[\\s\\\"']");
+    var result = [ ];
+
+    for(var row = 0; row < data.length; row++) {
+        for(var col = 0; col < data[row].length; col++) {
+            var datum = data[row][col].toString().trim();
+            datum = datum.replace(/"/g, "\\\"");
+            if(quotable.test(datum))
+                datum = '"' + datum + '"';
+            data[row][col] = datum;
+        }
+        result.push(data[row].join(","));
+    }
+    return result.join("\n");
 }
 
 //------------------------------------------------------------------------------
 
 function testReportHTML(fd, data, summary) {
+/*
+
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+
+*/
     error("debug", "Not implemented yet.", "testReportHTML");
 }
 
@@ -854,11 +881,7 @@ function error(level, message, location = "EXPERIOR") {
 
     - analyze test data
       -- totals by category and whole set
-      -- text-table using table module
 
-    - option to include descriptions in text/console
-    - output ansi
-    - output CSV
     - output HTML
 
     - docs
