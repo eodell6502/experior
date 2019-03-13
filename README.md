@@ -62,7 +62,14 @@ test data. The latter is activated with the `--prng` switch.
 When performing tests, there are two mandatory switches, `--infile` and 
 `--outfile`.
 
-#### -i, --infile
+__-i, --infile__: Specifies one or more input files containing test data. As with the
+other switches that take multiple arguments, you can place arguments after a single instance
+of a switch or use the switch multiple times, e.g.
+
+```bash
+$ experior -i foo.dat bar.dat         # is equivalent to...
+$ experior -i foo.dat -i bar.dat
+```
 
 ### Test Data Generation Switches
 
