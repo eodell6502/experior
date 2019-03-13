@@ -880,7 +880,7 @@ function error(level, message, location = "EXPERIOR") {
 /*
 
     - analyze test data
-      -- totals by category and whole set
+      -- [totals by category] and whole set
 
     - output HTML
 
