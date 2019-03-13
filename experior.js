@@ -1034,8 +1034,6 @@ function error(level, message, location = "EXPERIOR") {
 
 /*
 
-    - JS tests
-
     - docs
     - totals by category
     - cleanup
