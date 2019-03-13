@@ -54,6 +54,18 @@ published to the NPMjs repository.
     -h, --help                      Display this text.
 ```
 
+Experior has two mutually-exclusive operating modes, testing and generation of 
+test data. The latter is activated with the `--prng` switch.
+
+### Testing Switches
+
+When performing tests, there are two mandatory switches, `--infile` and 
+`--outfile`.
+
+#### -i, --infile
+
+### Test Data Generation Switches
+
 ## Test File Format
 
 ...
