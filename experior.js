@@ -105,6 +105,15 @@ function main() {
     if(exp.optionMap.css.vals.length)
         exp.css = exp.optionMap.css.vals[0];
 
+    if(exp.optionMap.jstest.vals.length) {
+        try {
+            exp.jsTest = require(exp.optionMap.jstest.vals[0]);
+        } catch(e) {
+            error("fatal", "Unable to require JS test file " + exp.optionMap.jstest.vals[0] + "\n", "main");
+        }
+    }
+
+
     // Have we been asked for PRNGs instead of a test run? ---------------------
 
     if(exp.optionMap.prng.vals.length == 2) {
@@ -164,6 +173,8 @@ function createSummary() {
         tests:      0,
         failed:     0,
         failPct:    0,
+        jsFailed:   0,
+        jsFailPct:  0,
         succeeded:  0,
         successPct: 0,
         regressed:  0,
@@ -179,12 +190,15 @@ function createSummary() {
             result.failed++;
         if(test.regression !== undefined && test.regression)
             result.regressed++;
+        if(test.jsSuccess !== undefined && !test.jsSuccess)
+            result.jsFailed++;
     }
 
     if(result.tests) { // avoid division by zero
         result.failPct    = ((result.failed    / result.tests) * 100).toFixed(1);
         result.successPct = ((result.succeeded / result.tests) * 100).toFixed(1);
         result.regressPct = ((result.regressed / result.tests) * 100).toFixed(1);
+        result.jsFailPct  = ((result.jsFailed  / result.tests) * 100).toFixed(1);
     }
 
     exp.summary = result;
@@ -270,7 +284,7 @@ function analyzeTestData() {
                     if(msg.id === undefined)
                         error("fatal", "JSON begin message with missing id in " + exp.infiles[f] + " at line " + lineNumber, "analyzeTestData");
 
-                    currentTest = msg.id.toString().trim();
+                    msg.id = msg.id.toString().trim();
 
                     if(msg.cat !== undefined)
                         msg.cat = msg.cat.toString().trim();
@@ -283,10 +297,22 @@ function analyzeTestData() {
                     if(msg.desc === undefined)
                         error("fatal", "JSON begin message with missing desc in " + exp.infiles[f] + " at line " + lineNumber, "analyzeTestData");
 
-                    // TODO: msg.jstest validate
-
                     currentTest = { id: msg.id, cat: msg.cat, label: msg.label, desc: msg.desc };
                     testData = [ ];
+
+                    if(exp.jsTest && msg.jsTest !== undefined) {
+                        var tref = { }
+                        if(!Array.isArray(msg.jsTest))
+                            msg.jsTest = [ msg.jsTest ];
+                        for(var j = 0; j < msg.jsTest.length; j++) {
+                            if(exp.jsTest[msg.jsTest[j]] === undefined) {
+                                error("fatal", "JavaScript test \"" + msg.jsTest[j] + "\" in test " + msg.cat + "/" + msg.id + " is undefined.");
+                            } else {
+                                tref[msg.jsTest[j]] = exp.jsTest[msg.jsTest[j]];
+                            }
+                        }
+                        currentTest.jsTest = tref;
+                    }
 
                 } else if(msg.type == "end") {
 
@@ -303,8 +329,12 @@ function analyzeTestData() {
                     currentTest.hash    = exp.md5(testBlob);
                     currentTest.size    = testBlob.length;
 
-                    // TODO: apply jstests
-                    //    blah blah blah msg.jsResults
+                    if(currentTest.jsTest) {
+                        for(var funcname in currentTest.jsTest) {
+                            currentTest.jsSuccess = currentTest.jsTest[funcname](msg.cat, msg.id, testBlob);
+                        }
+                        delete currentTest.jsTest;
+                    }
 
                     exp.tests[currentTest.id] = currentTest;
 
@@ -461,6 +491,9 @@ function assembleSummaryData() {
     if(exp.regression)
         rows.push(["Regressions:", exp.summary.regressed, exp.summary.regressPct + "%"]);
 
+    if(exp.jsTest)
+        rows.push(["JS Failed:", exp.summary.jsFailed, exp.summary.jsFailPct + "%"]);
+
     return rows;
 }
 
@@ -476,7 +509,7 @@ function assembleReportData() {
 
     var row = ["Test"];
     if(exp.jsTest)
-        row.push("JS");
+        row.push("JTST");
     if(exp.regression)
         row.push("Reg.");
     row.push("Category");
@@ -493,18 +526,18 @@ function assembleReportData() {
             continue;
 
         row = [ ];
-        row.push(test.success ? " ok " : "FAIL");
+        row.push(test.success ? "ok" : "FAIL");
         if(exp.jsTest) {
             if(test.jsSuccess === undefined) {
-                row.push("n/a ");
+                row.push("n/a");
             } else if(test.jsSuccess === true) {
-                row.push(" ok ");
+                row.push("ok");
             } else {
                 row.push("FAIL");
             }
         }
         if(exp.regression) {
-            row.push(test.regression ? "FAIL" : " ok ");
+            row.push(test.regression ? "FAIL" : "ok");
         }
         row.push(test.cat);
         row.push(test.id);
@@ -527,13 +560,13 @@ function assembleReportData() {
 
 function testReportConsole(data, summary, internal = false) {
     var columns = {
-        test:  { alignment: "center", minWidth: 4 },
-        js:    { alignment: "center", minWidth: 4 },
-        reg:   { alignment: "center", minWidth: 4 },
+        test:  { alignment: "center", width: 4 },
+        js:    { alignment: "center", width: 4 },
+        reg:   { alignment: "center", width: 4 },
         cat:   { alignment: "left" },
         id:    { alignment: "left" },
         label: { alignment: "left" },
-        desc:  { alignment: "left", wrapWord: true }
+        desc:  { alignment: "left", wrapWord: true, width: 40 }
     };
 
     if(exp.descWidth)
@@ -555,6 +588,13 @@ function testReportConsole(data, summary, internal = false) {
     config.columns[col++] = columns.label;
     if(exp.longFormat)
         config.columns[col++] = columns.desc;
+
+    for(var row = 0; row < data.length; row++) {
+        for(var col = 0; col < data[row].length; col++) {
+            if(data[row][col] == "ok")
+                data[row][col] = " ok ";
+        }
+    }
 
     var sconfig = {
         border: exp.table.getBorderCharacters("ramac"),
@@ -583,13 +623,13 @@ function testReportAnsi(data, summary) {
         data[0][i] = exp.ac.yellow.bold(data[0][i]);
 
     var columns = {
-        test:  { alignment: "center", minWidth: 4 },
-        js:    { alignment: "center", minWidth: 4 },
-        reg:   { alignment: "center", minWidth: 4 },
+        test:  { alignment: "center", width: 4 },
+        js:    { alignment: "center", width: 4 },
+        reg:   { alignment: "center", width: 4 },
         cat:   { alignment: "left" },
         id:    { alignment: "left" },
         label: { alignment: "left" },
-        desc:  { alignment: "left", wrapWord: true }
+        desc:  { alignment: "left", wrapWord: true, width: 40 }
     };
 
     if(exp.descWidth)
@@ -601,35 +641,35 @@ function testReportAnsi(data, summary) {
     };
 
     for(var row = 0; row < data.length; row++) {
-        if(data[row][0] == "n/a ")
-            data[row][0] = exp.ac.blue(data[row][0]);
-        else if(data[row][0] == " ok ")
-            data[row][0] = exp.ac.bgGreen.white.bold(data[row][0]);
+        if(data[row][0] == "n/a")
+            data[row][0] = exp.ac.blue(" -- ");
+        else if(data[row][0] == "ok")
+            data[row][0] = exp.ac.bgGreen.white.bold(" ok ");
         else if(data[row][0] == "FAIL")
-            data[row][0] = exp.ac.bgRed.yellow.bold(data[row][0]);
+            data[row][0] = exp.ac.bgRed.yellow.bold("FAIL");
     }
 
     var col = 0;
     config.columns[col++] = columns.test;
     if(exp.jsTest) {
         for(var row = 0; row < data.length; row++) {
-            if(data[row][col] == "n/a ")
-                data[row][col] = exp.ac.blue(data[row][col]);
-            else if(data[row][col] == " ok ")
-                data[row][col] = exp.ac.bgGreen.white.bold(data[row][col]);
+            if(data[row][col] == "n/a")
+                data[row][col] = exp.ac.blue(" -- ");
+            else if(data[row][col] == "ok")
+                data[row][col] = exp.ac.bgGreen.white.bold(" ok ") + " ";
             else if(data[row][col] == "FAIL")
-                data[row][col] = exp.ac.bgRed.yellow.bold(data[row][col]);
+                data[row][col] = exp.ac.bgRed.yellow.bold("FAIL") + " ";
         }
         config.columns[col++] = columns.js;
     }
     if(exp.regression) {
         for(var row = 0; row < data.length; row++) {
-            if(data[row][col] == "n/a ")
-                data[row][col] = exp.ac.blue(data[row][col]);
-            else if(data[row][col] == " ok ")
-                data[row][col] = exp.ac.bgGreen.white.bold(data[row][col]);
+            if(data[row][col] == "n/a")
+                data[row][col] = exp.ac.blue(" -- ");
+            else if(data[row][col] == "ok")
+                data[row][col] = exp.ac.bgGreen.white.bold(" ok ");
             else if(data[row][col] == "FAIL")
-                data[row][col] = exp.ac.bgRed.yellow.bold(data[row][col]);
+                data[row][col] = exp.ac.bgRed.yellow.bold("FAIL");
         }
         config.columns[col++] = columns.reg;
     }
@@ -670,6 +710,7 @@ function testReportAnsi(data, summary) {
         "Total Tests:": exp.ac.white.bold,
         "Succeeded:":   exp.ac.green.bold,
         "Failed:":      exp.ac.red.bold,
+        "JS Failed:":   exp.ac.magenta.bold,
         "Regressions:": exp.ac.yellow.bold
     };
 
@@ -740,7 +781,7 @@ function testReportHTML(fd, data, summary) {
             + "table.sgrid { margin-top: 0.5em; border-collapse: collapse; }\n"
             + "table.sgrid > thead { background-color: #263E4F;  color: white; }\n"
             + "table.sgrid > td { padding-left: 0.5em; padding-right: 0.5em; vertical-align: top; }\n"
-            + "table.sgrid td { border: 0.25pt solid black; }\n"
+            + "table.sgrid td { border: 0.25pt solid black; white-space: nowrap; vertical-align: top; }\n"
             + "table.sgrid th { background-color: #3C607B; border: 0.25pt solid black; }\n"
             + "table.sgrid td { padding-left: 0.25em; padding-right: 0.25em; }\n"
             + "table.sgrid td.success { color: white; background-color: #0A0; text-align: center; }\n"
@@ -749,6 +790,7 @@ function testReportHTML(fd, data, summary) {
             + "table.sgrid td.testId { font-weight: bold; }\n"
             + "table.sgrid td.failed { background-color: #FDD; }\n"
             + "table.sgrid td.num { text-align: right; }\n"
+            + "table.sgrid td.desc { white-space: normal; }\n"
             + "</style>\n"
         );
     }
@@ -789,14 +831,22 @@ function testReportHTML(fd, data, summary) {
             // You know that point when you're almost finished with a lot of code
             // and the last thing you do makes it painfully clear that you should
             // go back and refactor all of it? This conditional is where that
-            // happens here.
+            // happens here. Hacky McHackhack, sheesh.
 
-            if(failed && headerRow[col] != "Test" && headerRow[col] != "Reg." && headerRow[col] != "JS") {
+            if(failed && headerRow[col] != "Test" && headerRow[col] != "Reg." && headerRow[col] != "JTST") {
                 if(classItem.length) {
                     classItem = classItem.substr(0, classItem.length - 1);
                     classItem += " failed\"";
                 } else {
                     classItem = " class=\"failed\"";
+                }
+            }
+            if(headerRow[col] == "Test Description") {
+                if(classItem.length) {
+                    classItem = classItem.substr(0, classItem.length - 1);
+                    classItem += " desc\"";
+                } else {
+                    classItem = " class=\"desc\"";
                 }
             }
 
@@ -817,9 +867,10 @@ function testReportHTML(fd, data, summary) {
     );
 
     var sstyle = {
-        "Total Tests:": "font-weight: bold; color: #000; background-color: #FFF;",
+        "Total Tests:": "font-weight: bold; color: #FFF; background-color: #000;",
         "Succeeded:":   "font-weight: bold; color: #FFF; background-color: #0A0;",
         "Failed:":      "font-weight: bold; color: #FF0; background-color: #A00;",
+        "JS Failed:":   "font-weight: bold; color: #FFF; background-color: #A0A;",
         "Regressions:": "font-weight: bold; color: #000; background-color: #FF0;",
     };
 
