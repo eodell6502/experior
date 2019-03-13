@@ -1040,39 +1040,8 @@ function error(level, message, location = "EXPERIOR") {
     - test missing end msg
 
     - git-like command option for minicle
-    - minicle-usage using table
+    - Non-buggy table replacement
 
-{
-    type: "begin"
-    id: "SOMEGUID"
-    cat: (optional, top level sort key)
-    label: short label for reports
-    desc: longer, detailed description
-    jstest: single JS test function or an array thereof
-}
-{
-    type: "end",
-    id: "TESTGUID",   -- must match current test
-    success: boolean
-}
-
-
-@EXPERIOR: {"type":"begin","id":"TestOne","cat":"testdata","label":"Some even numbers","desc":"This is a bunch of even numbers."}
-
-2 4 6 8 10 12 14 16 18 20
-
-@EXPERIOR: {"type":"end","id":"TestOne","success":true }
-
-@EXPERIOR: {"type":"begin","id":"TestTwo","cat":"testdata","label":"Some odd numbers","desc":"This is a bunch of odd numbers."}
-
-1 3 5 7 9 11 13 15 17 19 21
-
-@EXPERIOR: {"type":"end","id":"TestTwo","success":true }
-@EXPERIOR: {"type":"begin","id":"TestThree","cat":"testdata","label":"Some negative numbers","desc":"This is a bunch of negative numbers."}
-
-1 2 3 4 5 6 7 8 9 10
-
-@EXPERIOR: {"type":"end","id":"TestThree","success":false }
 
 */
 
