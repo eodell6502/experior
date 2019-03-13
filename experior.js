@@ -401,26 +401,35 @@ function sortTests() {
 
 function produceTestReports() {
 
-    var data = assembleReportData();
+    var data   = assembleReportData();
+    var summary = assembleSummaryData();
 
     for(var filename in exp.outfiles) {
+
+        var dataCopy = [ ];
+        for(var i = 0; i < data.length; i++)
+            dataCopy[i] = data[i].slice(0);
+        var summaryCopy = [ ];
+        for(var i = 0; i < summary.length; i++)
+            summaryCopy[i] = summary[i].slice(0);
+
         switch(exp.outfiles[filename].type) {
             case "console":
-                testReportConsole(data);
+                testReportConsole(dataCopy, summaryCopy);
                 break;
             case "ansi":
-                testReportAnsi(data);
+                testReportAnsi(dataCopy, summaryCopy);
                 break;
             case "txt":
-                testReportText(exp.outfiles[filename].fd, data);
+                testReportText(exp.outfiles[filename].fd, dataCopy, summaryCopy);
                 exp.fs.closeSync(exp.outfiles[filename].fd);
                 break;
             case "csv":
-                testReportCSV(exp.outfiles[filename].fd, data);
+                testReportCSV(exp.outfiles[filename].fd, dataCopy, summaryCopy);
                 exp.fs.closeSync(exp.outfiles[filename].fd);
                 break;
             case "html":
-                testReportHTML(exp.outfiles[filename].fd, data);
+                testReportHTML(exp.outfiles[filename].fd, dataCopy, summaryCopy);
                 exp.fs.closeSync(exp.outfiles[filename].fd);
                 break;
             case "json":
@@ -429,6 +438,24 @@ function produceTestReports() {
                 break;
         }
     }
+}
+
+//==============================================================================
+// Puts the report summary data into an array of arrays for feeding to the
+// report formatters. There is no header row.
+//==============================================================================
+
+function assembleSummaryData() {
+    var rows = [
+        [ "Total Tests:", exp.summary.tests,     "100.0%"                     ],
+        [ "Succeeded:",   exp.summary.succeeded, exp.summary.successPct + "%" ],
+        [ "Failed:",      exp.summary.failed,    exp.summary.failPct    + "%" ],
+    ];
+
+    if(exp.regression)
+        rows.push(["Regressions:", exp.summary.regressed, exp.summary.regressPct + "%"]);
+
+    return rows;
 }
 
 
@@ -488,32 +515,11 @@ function assembleReportData() {
 
 
 //==============================================================================
-// Walks through exp.tests and calculates the maximum width of each field.
-//==============================================================================
-
-function findFieldWidths() {
-    exp.fieldWidths = { };
-    for(var testname in exp.tests) {
-        for(var fieldname in exp.tests[testname]) {
-            if(exp.fieldWidths[fieldname] === undefined)
-                exp.fieldWidths[fieldname] = 0;
-            var len = exp.tests[testname][fieldname].toString().length;
-            if(len > exp.fieldWidths[fieldname])
-                exp.fieldWidths[fieldname] = len;
-        }
-    }
-
-    error("debug", "exp.fieldWidths = ", "findFieldWidths");
-    if(exp.debug)
-        console.log(exp.fieldWidths);
-}
-
-//==============================================================================
 // These are the handlers for the various test report formats. All of them use
 // data output by assembleReportData.
 //==============================================================================
 
-function testReportConsole(data) {
+function testReportConsole(data, summary, internal = false) {
     var columns = {
         test:  { alignment: "center", minWidth: 4 },
         js:    { alignment: "center", minWidth: 4 },
@@ -544,13 +550,29 @@ function testReportConsole(data) {
     if(exp.longFormat)
         config.columns[col++] = columns.desc;
 
-    console.log(exp.table.table(data, config));
+    var sconfig = {
+        border: exp.table.getBorderCharacters("ramac"),
+        columns: {
+            0: { alignment: "left"  },
+            1: { alignment: "right" },
+            2: { alignment: "right" }
+        }
+    };
+
+    var result = exp.table.table(data, config) + "\n"
+            + "SUMMARY:\n"
+            + exp.table.table(summary, sconfig) + "\n\n";
+
+    if(internal)
+        return result;
+    else
+        console.log(result);
 }
 
 
 //------------------------------------------------------------------------------
 
-function testReportAnsi(data) {
+function testReportAnsi(data, summary) {
     for(var i = 0; i < data[0].length; i++)
         data[0][i] = exp.ac.yellow.bold(data[0][i]);
 
@@ -605,53 +627,81 @@ function testReportAnsi(data) {
         }
         config.columns[col++] = columns.reg;
     }
+
+    var catAndLater = col;
+
+    for(var row = 0; row < data.length; row++) {
+        var failed = false;
+        for(var c = 0; c < catAndLater; c++) {
+            if(data[row][c].match("FAIL")) {
+                failed = true;
+                break;
+            }
+        }
+        if(failed) {
+            for(var c = catAndLater; c < data[row].length - 1; c++) {
+                data[row][c] = exp.ac.red.bold(data[row][c]) + exp.ac.white("");
+            }
+        }
+    }
+
     config.columns[col++] = columns.cat;
     config.columns[col++] = columns.id;
     config.columns[col++] = columns.label;
     if(exp.longFormat)
         config.columns[col++] = columns.desc;
 
-    console.log(exp.table.table(data, config));
-}
+    var sconfig = {
+        border: exp.table.getBorderCharacters("honeywell"),
+        columns: {
+            0: { alignment: "left"  },
+            1: { alignment: "right" },
+            2: { alignment: "right" }
+        }
+    };
 
-//------------------------------------------------------------------------------
+    var scolor = {
+        "Total Tests:": exp.ac.white.bold,
+        "Succeeded:":   exp.ac.green.bold,
+        "Failed:":      exp.ac.red.bold,
+        "Regressions:": exp.ac.yellow.bold
+    };
 
-function testReportText(fd, data) {
-    if(exp.fieldWidths === null)
-        findFieldWidths();
-
-    var lineWidth = 26 + Math.max(exp.fieldWidths.cat, "CATEGORY".length)
-        + Math.max(exp.fieldWidths.label, "TEST ID".length);
-        + Math.max(exp.fieldWidths.label, "LABEL".length);
-
-    exp.fs.writeSync(fd, "+" + "".padEnd(lineWidth - 2, "-") + "+\n");
-    exp.fs.writeSync(fd, "| TEST | "
-        + "CATEGORY".padEnd(exp.fieldWidths.cat) + " | "
-        + "TEST ID".padEnd(exp.fieldWidths.id) + " | "
-        + "LABEL".padEnd(exp.fieldWidths.label) + " |\n");
-    exp.fs.writeSync(fd, "+" + "".padEnd(lineWidth - 2, "-") + "+\n");
-
-    for(var i = 0; i < exp.testSequence.length; i++) {
-        var test = exp.tests[exp.testSequence[i]];
-        var status = test.success ? " ok " : "FAIL";
-        exp.fs.writeSync(fd, "| " + status + " | "
-            + test.cat.padEnd(exp.fieldWidths.cat) + " | "
-            + test.id.padEnd(exp.fieldWidths.id) + " | "
-            + test.label.padEnd(exp.fieldWidths.label) + " |\n");
+    for(var row = 0; row < summary.length; row++) {
+        if(scolor[summary[row][0]] !== undefined)
+            var func = scolor[summary[row][0]];
+        else
+            var func = function(x) { return x; };
+        for(var col = 0; col < summary[row].length; col++) {
+            summary[row][col] = func(summary[row][col]);
+        }
     }
 
-    exp.fs.writeSync(fd, "+" + "".padEnd(lineWidth - 2, "-") + "+\n");
+    var result = exp.table.table(data, config) + "\n"
+            + exp.ac.white.bold("SUMMARY:\n")
+            + exp.table.table(summary, sconfig) + "\n\n";
+
+    console.log(result);
 }
 
 //------------------------------------------------------------------------------
 
-function testReportCSV(fd, data) {
+function testReportText(fd, data, summary) {
+
+    var content = testReportConsole(data, true);
+    exp.fs.writeSync(fd, content);
+
+}
+
+//------------------------------------------------------------------------------
+
+function testReportCSV(fd, data, summary) {
     error("debug", "Not implemented yet.", "testReportCSV");
 }
 
 //------------------------------------------------------------------------------
 
-function testReportHTML(fd, data) {
+function testReportHTML(fd, data, summary) {
     error("debug", "Not implemented yet.", "testReportHTML");
 }
 

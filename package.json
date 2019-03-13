@@ -2,11 +2,11 @@
   "name": "experior",
   "version": "0.0.1",
   "description": "A powerful but minimalist unit and regression test tool.",
-  "main": "index.js",
+  "main": "experior.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "Eric O'Dell",
+  "author": "Erich Waidthaler",
   "license": "BSD-2-Clause",
   "dependencies": {
     "ansi-colors": "^3.2.4",
@@ -14,5 +14,16 @@
     "md5": "^2.2.1",
     "minicle": "0.0.1",
     "table": "^5.2.3"
-  }
+  },
+  "bin": {
+    "experior": "experior.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Waidthaler/experior.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Waidthaler/experior/issues"
+  },
+  "homepage": "https://github.com/Waidthaler/experior#readme"
 }
