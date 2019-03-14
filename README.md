@@ -180,7 +180,7 @@ to go.
 
 ### .txt/console
 
-[console output]()
+![console output](https://github.com/Waidthaler/experior/blob/master/misc/console.png)
 
 ### ANSI console
 
