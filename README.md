@@ -184,7 +184,7 @@ to go.
 
 ### ANSI console
 
-[ansi console output](https://github.com/Waidthaler/experior/blob/master/misc/ansi.png)
+![ansi console output](https://github.com/Waidthaler/experior/blob/master/misc/ansi.png)
 
 ### HTML
 
