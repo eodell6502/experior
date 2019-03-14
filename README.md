@@ -277,11 +277,58 @@ the reports.
 
 ## JavaScript Tests
 
-Without getting into JavaScript tests, Experior expects you to write your own 
-tests however you want. You could be writing a C++ program to exercise a library 
-written in C. You could be using a scripting language with one of those 
-`stupid(frameworks).with(pseudoEnglish).syntax`. Like the honey badger, Experior
-don't care. You do your tests, write the 
+Experior expects you to write your own tests however you want. You could be 
+writing a C++ program to exercise a library written in C. You could be using a 
+scripting language with one of those 
+`stupid(frameworks).with(pseudoEnglish).chained(syntax)`. Like the honey badger, 
+Experior don't care. You do your tests, write the output to a file, and you can 
+write a bunch of tests in high-level JavaScript to sift through output from an 
+assembly language program as easily as output from another JavaScript program.
+
+To do this, you write your tests as functions that reside as keys in an object 
+exported by a Node.js module. Once referenced on the commandline with the 
+`--jstest` switch, Experior will require your module and apply the tests where 
+directed by the optional `jsTest` attribute in the beginning-of-test header,
+which contains either a single function name or an array of function names.
+
+The functions all take the same arguments:
+
+```javascript
+function(cat, testId, data)
+```
+
+...where `cat` is the category name from the `cat` attribute in the header, 
+`testId` is from the `id` attribute, and `data` contains all of the lines from 
+the actual test data packed together as a string with embedded newlines. The 
+function does whatever it's going to do and then returns `true` on success or 
+`false` on failure.
+
+The module file might look like this:
+
+```javascript
+var tests = {
+	foo: function(cat, testId, data) { /* mumble mumble */ },
+	bar: function(cat, testId, data) { /* mumble mumble */ },
+	baz: function(cat, testId, data) { /* mumble mumble */ },
+}
+
+module.exports = tests;
+```
+
+Given the above, you can fire off a single test in the header like this:
+
+```javascript
+...,"jsTest":"foo" }
+```
+
+Or you can fire off several by supplying an array:
+
+```javascript
+...,"jsTest":["foo","bar","baz"] }
+```
+
+Failed JavaScript tests are reported separately from both regressions and
+the test results stored in the `success` element in the header.
 
 ## Tutorial and Examples
 
