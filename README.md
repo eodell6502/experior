@@ -332,7 +332,20 @@ the test results stored in the `success` element in the header.
 
 ## Tutorial and Examples
 
-...
+If you clone the [source repository](https://github.com/Waidthaler/experior), 
+you'll find the tutorial files we'll be discussing in the `/examples` 
+subdirectory. We'll start with a test program, cleverly named `test_program.js`,
+and the equally obscure jstests.js, which contains our JavaScript tests. From
+these inauspicious beginnings, we will generate several other files, including
+test data, reports, and regression tests.
+
+It will help if you go ahead and install Experior
+
+```bash
+$ npm install experior --global
+```
+
+... TODO ...
 
 ## Status
 
