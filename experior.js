@@ -1036,6 +1036,7 @@ function error(level, message, location = "EXPERIOR") {
 
     - docs
     - totals by category
+    - index by cat:id
     - cleanup
     - test missing end msg
 

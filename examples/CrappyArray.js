@@ -29,15 +29,15 @@ class CrappyArray {
 
     //--------------------------------------------------------------------------
     // Length reimplementation. The getter works fine, but the setter
-    // erroneously changes this._length.
+    // erroneously changes this._length without adjusting this._contents.
     //--------------------------------------------------------------------------
 
     get length() {
         return this._contents.length;
     }
 
-    set length(val) {        // BUG: The length attribute of arrays should be
-        this._length = val;   // read-only.
+    set length(val) {        // BUG: We fail to set this._contents.length
+        this._length = val;
     }
 
     //--------------------------------------------------------------------------
