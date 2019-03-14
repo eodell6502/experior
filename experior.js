@@ -734,7 +734,7 @@ function testReportAnsi(data, summary) {
 //------------------------------------------------------------------------------
 
 function testReportText(fd, data, summary) {
-    var content = testReportConsole(data, true);
+    var content = testReportConsole(data, summary, true);
     exp.fs.writeSync(fd, content);
 }
 

@@ -11,8 +11,9 @@ tests and included the results, and it generates reports in various formats from
 that. It can also apply tests written in JavaScript to the test output. Both 
 types of tests can be used at the same time.
 
-It can also emit a JSON file containing test IDs and the MD5 hashes derived from 
-the test output. This can be re-used on subsequent runs to detect regressions.
+It can also emit a JSON file containing test identifiers and the MD5 hashes 
+derived from the test output. This can be re-used on subsequent runs to detect 
+regressions.
 
 Experior doesn't care how you are creating and running your tests, what language 
 they are in, or what their output looks like. All it cares is that the test 
@@ -177,7 +178,63 @@ to go.
 
 ## Output Formats
 
-...
+### .txt/console
+
+[console output]()
+
+### ANSI console
+
+### HTML
+
+### CSV
+
+### JSON
+
+(JSON output is produced as a single line. We've dumped it here by passing it through
+Node's `console.log` to make it more readable.)
+
+```javascript
+{ TestOne:
+   { id: 'TestOne',
+     cat: 'testdata',
+     label: 'Some even numbers',
+     desc: 'This is a bunch of even numbers.',
+     success: false,
+     hash: '7dd9d0507fa51a36dd01ccca9b767a44',
+     size: 27,
+     jsSuccess: true,
+     regression: false },
+  TestTwo:
+   { id: 'TestTwo',
+     cat: 'testdata',
+     label: 'Some odd numbers',
+     desc:
+      'This is a bunch of odd numbers.',
+     success: true,
+     hash: '3a3643bc0e3783a8478f5f0febfd5fde',
+     size: 29,
+     jsSuccess: true,
+     regression: true },
+  TestThree:
+   { id: 'TestThree',
+     cat: 'testdata',
+     label: 'Some negative numbers',
+     desc: 'This is a bunch of negative numbers.',
+     success: true,
+     hash: '8aac0526c764d1d27d4ea51c74e5e783',
+     size: 120,
+     jsSuccess: false,
+     regression: false },
+  TestFour:
+   { id: 'TestFour',
+     cat: 'testdata',
+     label: 'A 100% successful test',
+     desc: 'This is to test total success.',
+     success: true,
+     hash: '9f62cbf5dad6e929a72071a409aec202',
+     size: 30,
+     jsSuccess: true } }
+```
 
 ## Regression Tests
 
