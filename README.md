@@ -184,13 +184,21 @@ to go.
 
 ### ANSI console
 
+MS-DOS survivors, represent!
+
 ![ansi console output](https://github.com/Waidthaler/experior/blob/master/misc/ansi.png)
 
 ### HTML
 
+If you don't care for my dubious web design skills, Experior will let you substitute
+your own CSS stylesheet with the `--css` switch.
+
 ![html output](https://github.com/Waidthaler/experior/blob/master/misc/html.png)
 
 ### CSV
+
+The only thing less interesting than CSV files is anything one could think to say
+about them.
 
 ```
 Test,JTST,Reg.,Category,"Test ID",Label,"Test Description"
@@ -209,8 +217,8 @@ Regressions:,1,25.0%
 
 ### JSON
 
-(JSON output is produced as a single line. We've dumped it here by passing it through
-Node's `console.log` to make it more readable.)
+JSON output is produced as a single line. We've dumped it here by passing it through
+Node's `console.log` to make it more readable.
 
 ```javascript
 { TestOne:
