@@ -188,7 +188,24 @@ to go.
 
 ### HTML
 
+![html output](https://github.com/Waidthaler/experior/blob/master/misc/html.png)
+
 ### CSV
+
+```
+Test,JTST,Reg.,Category,"Test ID",Label,"Test Description"
+ok,ok,ok,testdata,TestFour,"A 100% successful test","This is to test total success."
+FAIL,ok,ok,testdata,TestOne,"Some even numbers","This is a bunch of even numbers."
+ok,FAIL,ok,testdata,TestThree,"Some negative numbers","This is a bunch of negative numbers."
+ok,ok,FAIL,testdata,TestTwo,"Some odd numbers","This is a bunch of odd numbers."
+
+SUMMARY:
+"Total Tests:",4,100.0%
+Succeeded:,3,75.0%
+Failed:,1,25.0%
+Regressions:,1,25.0%
+"JS Failed:",1,25.0%
+```
 
 ### JSON
 
