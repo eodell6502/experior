@@ -339,7 +339,7 @@ and the equally obscure jstests.js, which contains our JavaScript tests. From
 these inauspicious beginnings, we will generate several other files, including
 test data, reports, and regression tests.
 
-It will help if you go ahead and install Experior
+It will help if you go ahead and install Experior.
 
 ```bash
 $ npm install experior --global
