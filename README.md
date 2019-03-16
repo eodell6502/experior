@@ -334,15 +334,110 @@ the test results stored in the `success` element in the header.
 
 If you clone the [source repository](https://github.com/Waidthaler/experior), 
 you'll find the tutorial files we'll be discussing in the `/examples` 
-subdirectory. We'll start with a test program, cleverly named `test_program.js`,
-and the equally obscure jstests.js, which contains our JavaScript tests. From
-these inauspicious beginnings, we will generate several other files, including
-test data, reports, and regression tests.
+subdirectory. We'll start with a test program, cleverly named `test_program.js`, 
+and the equally obscure jstests.js, which contains our JavaScript tests. There 
+is also our test subject, a deliberately buggy partial reimplementation of the 
+native Array type, which you'll find in `CrappyArray.js`. From these 
+inauspicious beginnings, we will generate several other files, including test 
+data, reports, and regression tests.
 
 It will help if you go ahead and install Experior.
 
 ```bash
 $ npm install experior --global
+```
+
+First, let's take a look at CrappyArray.js:
+
+```javascript
+//==============================================================================
+// To have something to test, we're going to use this buggy, incomplete,
+// and awkward wrapper around a native JavaScript array, the CrappyArray.
+//==============================================================================
+
+class CrappyArray {
+
+    constructor(...vals) {
+        if(vals.length == 1 && typeof vals[0] == "number") {
+            this._contents = new Array(vals[0]);
+        } else {
+            this._contents = vals;
+        }
+        this._length = this._contents.length;
+    }
+
+    //--------------------------------------------------------------------------
+    // This is our crude replacement for the [] operator.
+    //--------------------------------------------------------------------------
+
+    element(offset, val) {
+        if(val == undefined) {
+            return this._contents[offset];
+        } else {
+            this._contents[offset] = val;
+            return val;
+        }
+    }
+
+    //--------------------------------------------------------------------------
+    // Length reimplementation. The getter works fine, but the setter
+    // erroneously changes this._length without adjusting this._contents.
+    //--------------------------------------------------------------------------
+
+    get length() {
+        return this._contents.length;
+    }
+
+    set length(val) {        // BUG: We fail to set this._contents.length
+        this._length = val;
+    }
+
+    //--------------------------------------------------------------------------
+    // Reimplementations of push, pop, shift, and unshift. The shift and
+    // unshift methods are swapped, i.e., shift unshifts and unshift shifts.
+    //--------------------------------------------------------------------------
+
+    push(val) {
+        this._contents.push(val);
+        this._length++
+    }
+
+    pop() {
+        this._length++;               // BUG: should be this._length--
+        return this._contents.pop();
+    }
+
+    shift(val) {                     // BUG: should be unshift
+        this._length++;
+        this._contents.unshift(val);
+    }
+
+    unshift() {                      // BUG: should be shift
+        this._length--;
+        return this._contents.shift();
+    }
+
+    //--------------------------------------------------------------------------
+    // A couple of additional methods: reverse and join. The join clone works
+    // fine unless no separator is supplied, and reverse screws up if
+    // this._length is inaccurate due to calls to our buggy pop method.
+    //--------------------------------------------------------------------------
+
+    reverse() {
+        var tmp;
+        for(var i = 0; i < this._length / 2; i++) {
+            tmp = this._contents[i];
+            this._contents[i] = this._contents[this._length - 1 - i];
+            this._contents[this._length - 1 - i] = tmp;
+        }
+    }
+
+    join(separator = null) {
+        return this._contents.join(separator);
+    }
+}
+
+module.exports = CrappyArray;
 ```
 
 ... TODO ...
