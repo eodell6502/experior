@@ -21,7 +21,7 @@ output is wrapped in a simple, standardized format. You _can_ write tests in
 JavaScript for Experior to apply to the test output, but this is entirely 
 optional.
 
-Full details are below, including a tutorial with examples.
+Full details are below, including full demo to serve as an example.
 
 ## Installation
 
@@ -330,120 +330,14 @@ Or you can fire off several by supplying an array:
 Failed JavaScript tests are reported separately from both regressions and
 the test results stored in the `success` element in the header.
 
-## Tutorial and Examples
+## Examples
 
 If you clone the [source repository](https://github.com/Waidthaler/experior), 
-you'll find the tutorial files we'll be discussing in the `/examples` 
-subdirectory. We'll start with a test program, cleverly named `test_program.js`, 
-and the equally obscure jstests.js, which contains our JavaScript tests. There 
-is also our test subject, a deliberately buggy partial reimplementation of the 
-native Array type, which you'll find in `CrappyArray.js`. From these 
-inauspicious beginnings, we will generate several other files, including test 
-data, reports, and regression tests.
+you'll find the example files in the `/examples` subdirectory. It includes the
+obscurely named `test_program.js` which runs a decently wide range of simple
+tests on a crappy array implementation, `CrappyArray.js`. An example JavaScript
+post-test is provided in `jstest.js`. Finally, there is a set of regression
+data in `regression_data.json`. This may be the most superfluous paragraph I've
+ever written.
 
-It will help if you go ahead and install Experior.
 
-```bash
-$ npm install experior --global
-```
-
-First, let's take a look at CrappyArray.js:
-
-```javascript
-//==============================================================================
-// To have something to test, we're going to use this buggy, incomplete,
-// and awkward wrapper around a native JavaScript array, the CrappyArray.
-//==============================================================================
-
-class CrappyArray {
-
-    constructor(...vals) {
-        if(vals.length == 1 && typeof vals[0] == "number") {
-            this._contents = new Array(vals[0]);
-        } else {
-            this._contents = vals;
-        }
-        this._length = this._contents.length;
-    }
-
-    //--------------------------------------------------------------------------
-    // This is our crude replacement for the [] operator.
-    //--------------------------------------------------------------------------
-
-    element(offset, val) {
-        if(val == undefined) {
-            return this._contents[offset];
-        } else {
-            this._contents[offset] = val;
-            return val;
-        }
-    }
-
-    //--------------------------------------------------------------------------
-    // Length reimplementation. The getter works fine, but the setter
-    // erroneously changes this._length without adjusting this._contents.
-    //--------------------------------------------------------------------------
-
-    get length() {
-        return this._contents.length;
-    }
-
-    set length(val) {        // BUG: We fail to set this._contents.length
-        this._length = val;
-    }
-
-    //--------------------------------------------------------------------------
-    // Reimplementations of push, pop, shift, and unshift. The shift and
-    // unshift methods are swapped, i.e., shift unshifts and unshift shifts.
-    //--------------------------------------------------------------------------
-
-    push(val) {
-        this._contents.push(val);
-        this._length++
-    }
-
-    pop() {
-        this._length++;               // BUG: should be this._length--
-        return this._contents.pop();
-    }
-
-    shift(val) {                     // BUG: should be unshift
-        this._length++;
-        this._contents.unshift(val);
-    }
-
-    unshift() {                      // BUG: should be shift
-        this._length--;
-        return this._contents.shift();
-    }
-
-    //--------------------------------------------------------------------------
-    // A couple of additional methods: reverse and join. The join clone works
-    // fine unless no separator is supplied, and reverse screws up if
-    // this._length is inaccurate due to calls to our buggy pop method.
-    //--------------------------------------------------------------------------
-
-    reverse() {
-        var tmp;
-        for(var i = 0; i < this._length / 2; i++) {
-            tmp = this._contents[i];
-            this._contents[i] = this._contents[this._length - 1 - i];
-            this._contents[this._length - 1 - i] = tmp;
-        }
-    }
-
-    join(separator = null) {
-        return this._contents.join(separator);
-    }
-}
-
-module.exports = CrappyArray;
-```
-
-... TODO ...
-
-## Status
-
-Experior is currently in beta as of 3/13/2019. In a week or so, when I'm done 
-testing it to my satisfaction, it will be bumped up to 1.0.0 and published to 
-the NPMjs repository.

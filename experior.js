@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 var File = require("./lib/file.js");
 
 var exp = {
@@ -16,21 +18,22 @@ var exp = {
     prefix:    "@EXPERIOR:",
 
     optionMap: {
-        css:        { short: "c", vals: [ ] },
-        debug:      { short: "d", cnt: 0    },
-        failures:   { short: "f", cnt: 0    },
-        help:       { short: "h", cnt: 0    },
-        infile:     { short: "i", vals: [ ] },
-        jstest:     { short: "j", vals: [ ] },
-        long:       { short: "l", cnt: 0    },
-        msgprefix:  { short: "m", vals: [ ] },
-        outfile:    { short: "o", vals: [ ] },
-        prng:       { short: "p", vals: [ ] },
-        quiet:      { short: "q", cnt: 0    },
-        regression: { short: "r", vals: [ ] },
-        seed:       { short: "s", vals: [ ] },
-        verbose:    { short: "v", cnt: 0    },
-        width:      { short: "w", vals: [ ] },
+        css:            { short: "c", vals: [ ] },
+        debug:          { short: "d", cnt: 0    },
+        failures:       { short: "f", cnt: 0    },
+        "full-regress": { short: "R", cnt: 0    },
+        help:           { short: "h", cnt: 0    },
+        infile:         { short: "i", vals: [ ] },
+        jstest:         { short: "j", vals: [ ] },
+        long:           { short: "l", cnt: 0    },
+        msgprefix:      { short: "m", vals: [ ] },
+        outfile:        { short: "o", vals: [ ] },
+        prng:           { short: "p", vals: [ ] },
+        quiet:          { short: "q", cnt: 0    },
+        regression:     { short: "r", vals: [ ] },
+        seed:           { short: "s", vals: [ ] },
+        verbose:        { short: "v", cnt: 0    },
+        width:          { short: "w", vals: [ ] },
     },
     css:          false,
     debug:        false,
@@ -131,8 +134,10 @@ function main() {
 
     // If we get here, it's test time! -----------------------------------------
 
-    if(!exp.optionMap.infile.vals.length)
+    if(!exp.optionMap.infile.vals.length) {
+        usage(false);
         error("fatal", "At least one input file must be specified.", "main");
+    }
     exp.infiles = exp.optionMap.infile.vals;
 
     if(exp.optionMap.regression.vals.length) {
@@ -960,26 +965,28 @@ function prng(type, num, seed) {
 // Outputs usage instructions.
 //==============================================================================
 
-function usage() {
+function usage(exit = true) {
 
     console.log(exp.ac.white.bold("  Usage: experior [options]\n\n")
-        + exp.ac.yellow.bold("    -i") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--infile     ") + exp.ac.blue.bold("<filename(s)>  ") + exp.ac.cyan.bold("Path to input file(s).\n")
-        + exp.ac.yellow.bold("    -o") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--outfile    ") + exp.ac.blue.bold("<filename(s)>  ") + exp.ac.cyan.bold("Output file names.\n")
-        + exp.ac.yellow.bold("    -r") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--regression ") + exp.ac.blue.bold("<filename>     ") + exp.ac.cyan.bold("Regression test input file.\n")
-        + exp.ac.yellow.bold("    -j") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--jstest     ") + exp.ac.blue.bold("<filename>     ") + exp.ac.cyan.bold("JavaScript test module.\n")
-        + exp.ac.yellow.bold("    -c") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--css        ") + exp.ac.blue.bold("<filename>     ") + exp.ac.cyan.bold("CSS file to use with HTML output.\n")
-        + exp.ac.yellow.bold("    -l") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--long       ") + exp.ac.blue.bold("               ") + exp.ac.cyan.bold("Use long report format.\n")
-        + exp.ac.yellow.bold("    -w") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--width      ") + exp.ac.blue.bold("<number>       ") + exp.ac.cyan.bold("Set width for text descriptions.\n")
-        + exp.ac.yellow.bold("    -m") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--msgprefix  ") + exp.ac.blue.bold("<string>       ") + exp.ac.cyan.bold("Experior message prefix.\n")
-        + exp.ac.yellow.bold("    -f") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--failures   ") + exp.ac.blue.bold("               ") + exp.ac.cyan.bold("Only show failures in reports.\n")
-        + exp.ac.yellow.bold("    -p") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--prng       ") + exp.ac.blue.bold("<type> <num>   ") + exp.ac.cyan.bold("Generate num random numbers of type.\n")
-        + exp.ac.yellow.bold("    -s") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--seed       ") + exp.ac.blue.bold("<num|string>   ") + exp.ac.cyan.bold("Explicit PRNG seed.\n")
-        + exp.ac.yellow.bold("    -v") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--verbose    ") + exp.ac.blue.bold("               ") + exp.ac.cyan.bold("Increase verbosity (starts at 1, up to 4).\n")
-        + exp.ac.yellow.bold("    -q") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--quiet      ") + exp.ac.blue.bold("               ") + exp.ac.cyan.bold("Suppress console output.\n")
-        + exp.ac.yellow.bold("    -d") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--debug      ") + exp.ac.blue.bold("               ") + exp.ac.cyan.bold("Display debugging info.\n")
-        + exp.ac.yellow.bold("    -h") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--help       ") + exp.ac.blue.bold("               ") + exp.ac.cyan.bold("Display this text.\n\n"));
+        + exp.ac.yellow.bold("    -i") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--infile        ") + exp.ac.blue.bold("<filename(s)>  ") + exp.ac.cyan.bold("Path to input file(s).\n")
+        + exp.ac.yellow.bold("    -o") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--outfile       ") + exp.ac.blue.bold("<filename(s)>  ") + exp.ac.cyan.bold("Output file names.\n")
+        + exp.ac.yellow.bold("    -r") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--regression    ") + exp.ac.blue.bold("<filename>     ") + exp.ac.cyan.bold("Regression test input file.\n")
+        + exp.ac.yellow.bold("    -R") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--full-regress  ") + exp.ac.blue.bold("               ") + exp.ac.cyan.bold("Create and use full regression data.\n")
+        + exp.ac.yellow.bold("    -j") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--jstest        ") + exp.ac.blue.bold("<filename>     ") + exp.ac.cyan.bold("JavaScript test module.\n")
+        + exp.ac.yellow.bold("    -c") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--css           ") + exp.ac.blue.bold("<filename>     ") + exp.ac.cyan.bold("CSS file to use with HTML output.\n")
+        + exp.ac.yellow.bold("    -l") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--long          ") + exp.ac.blue.bold("               ") + exp.ac.cyan.bold("Use long report format.\n")
+        + exp.ac.yellow.bold("    -w") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--width         ") + exp.ac.blue.bold("<number>       ") + exp.ac.cyan.bold("Set width for text descriptions.\n")
+        + exp.ac.yellow.bold("    -m") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--msgprefix     ") + exp.ac.blue.bold("<string>       ") + exp.ac.cyan.bold("Experior message prefix.\n")
+        + exp.ac.yellow.bold("    -f") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--failures      ") + exp.ac.blue.bold("               ") + exp.ac.cyan.bold("Only show failures in reports.\n")
+        + exp.ac.yellow.bold("    -p") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--prng          ") + exp.ac.blue.bold("<type> <num>   ") + exp.ac.cyan.bold("Generate num random numbers of type.\n")
+        + exp.ac.yellow.bold("    -s") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--seed          ") + exp.ac.blue.bold("<num|string>   ") + exp.ac.cyan.bold("Explicit PRNG seed.\n")
+        + exp.ac.yellow.bold("    -v") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--verbose       ") + exp.ac.blue.bold("               ") + exp.ac.cyan.bold("Increase verbosity (1-4).\n")
+        + exp.ac.yellow.bold("    -q") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--quiet         ") + exp.ac.blue.bold("               ") + exp.ac.cyan.bold("Suppress console output.\n")
+        + exp.ac.yellow.bold("    -d") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--debug         ") + exp.ac.blue.bold("               ") + exp.ac.cyan.bold("Display debugging info.\n")
+        + exp.ac.yellow.bold("    -h") + exp.ac.yellow(", ") + exp.ac.yellow.bold("--help          ") + exp.ac.blue.bold("               ") + exp.ac.cyan.bold("Display this text.\n\n"));
 
-    exp.process.exit(0);
+    if(exit)
+        exp.process.exit(0);
 }
 
 
@@ -1034,11 +1041,13 @@ function error(level, message, location = "EXPERIOR") {
 
 /*
 
-    - docs
-    - totals by category
-    - index by cat:id
-    - cleanup
-    - test missing end msg
+    1.0.0:
+        - docs
+        - full regressions
+        - totals by category
+        - index by cat:id
+        - cleanup
+        - test missing end msg
 
     - git-like command option for minicle
     - Non-buggy table replacement
