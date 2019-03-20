@@ -297,7 +297,7 @@ function CAMisc(fd) {
     subject.reverse();
 
     result.control.post = control.join(",");
-    result.subject.post = control.join(",");
+    result.subject.post = subject.join(",");
 
     // Note that we're marking this as a success because we're not performing
     // any internal tests.
@@ -315,7 +315,7 @@ function CAMisc(fd) {
     var subject = new CrappyArray("foo", "bar", "baz", "quux");
 
     result.control = control.join();
-    result.subject = control.join();
+    result.subject = subject.join();
 
     writeTest(fd, "CAMisc2", "CrappyJSTest", "Default join separator",
         "Here we compare the behavior of Array.join and CrappyArray.join when "

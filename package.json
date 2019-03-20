@@ -10,6 +10,7 @@
   "license": "BSD-2-Clause",
   "dependencies": {
     "ansi-colors": "^3.2.4",
+    "diff": "^4.0.1",
     "isaac": "0.0.5",
     "md5": "^2.2.1",
     "minicle": "0.0.1",
