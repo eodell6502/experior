@@ -349,7 +349,6 @@ ever written.
 * docs
 * full regressions
   * emit diffs in reports
-* totals by category
 * cleanup
 
 

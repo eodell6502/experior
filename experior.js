@@ -189,36 +189,56 @@ function main() {
 //==============================================================================
 
 function createSummary() {
-    var result = {
-        tests:      0,
-        failed:     0,
-        failPct:    0,
-        jsFailed:   0,
-        jsFailPct:  0,
-        succeeded:  0,
-        successPct: 0,
-        regressed:  0,
-        regressPct: 0,
-    };
+    var cats = { };
+    for(var k in exp.tests)
+        cats[exp.tests[k].cat] = true;
+
+    cats = Object.keys(cats);
+    cats.sort();
+    cats.unshift("@@GLOBAL@@");
+
+    var result = {};
+    for(var i = 0; i < cats.length; i++)
+        result[cats[i]] = {
+            tests:      0,
+            failed:     0,
+            failPct:    0,
+            jsFailed:   0,
+            jsFailPct:  0,
+            succeeded:  0,
+            successPct: 0,
+            regressed:  0,
+            regressPct: 0,
+        };
 
     for(var k in exp.tests) {
         test = exp.tests[k];
-        result.tests++;
-        if(test.success)
-            result.succeeded++;
-        else
-            result.failed++;
-        if(test.regression !== undefined && test.regression)
-            result.regressed++;
-        if(test.jsSuccess !== undefined && !test.jsSuccess)
-            result.jsFailed++;
+        result[exp.tests[k].cat].tests++;
+        result["@@GLOBAL@@"].tests++;
+        if(test.success) {
+            result[exp.tests[k].cat].succeeded++;
+            result["@@GLOBAL@@"].succeeded++;
+        } else {
+            result[exp.tests[k].cat].failed++;
+            result["@@GLOBAL@@"].failed++;
+        }
+        if(test.regression !== undefined && test.regression) {
+            result[exp.tests[k].cat].regressed++;
+            result["@@GLOBAL@@"].regressed++;
+        }
+        if(test.jsSuccess !== undefined && !test.jsSuccess) {
+            result[exp.tests[k].cat].jsFailed++;
+            result["@@GLOBAL@@"].jsFailed++;
+        }
     }
 
-    if(result.tests) { // avoid division by zero
-        result.failPct    = ((result.failed    / result.tests) * 100).toFixed(1);
-        result.successPct = ((result.succeeded / result.tests) * 100).toFixed(1);
-        result.regressPct = ((result.regressed / result.tests) * 100).toFixed(1);
-        result.jsFailPct  = ((result.jsFailed  / result.tests) * 100).toFixed(1);
+    for(var i = 0; i < cats.length; i++) {
+        if(result[cats[i]].tests) { // avoid division by zero
+            result[cats[i]].failPct    = ((result[cats[i]].failed    / result[cats[i]].tests) * 100).toFixed(1);
+            result[cats[i]].successPct = ((result[cats[i]].succeeded / result[cats[i]].tests) * 100).toFixed(1);
+            result[cats[i]].regressPct = ((result[cats[i]].regressed / result[cats[i]].tests) * 100).toFixed(1);
+            result[cats[i]].jsFailPct  = ((result[cats[i]].jsFailed  / result[cats[i]].tests) * 100).toFixed(1);
+        }
     }
 
     exp.summary = result;
@@ -227,7 +247,6 @@ function createSummary() {
     if(exp.debug)
         console.log(exp.summary);
 }
-
 
 //==============================================================================
 // Loads the regression file and flags regressions in exp.tests and flags
@@ -496,17 +515,32 @@ function produceTestReports() {
 //==============================================================================
 
 function assembleSummaryData() {
-    var rows = [
-        [ "Total Tests:", exp.summary.tests,     "100.0%"                     ],
-        [ "Succeeded:",   exp.summary.succeeded, exp.summary.successPct + "%" ],
-        [ "Failed:",      exp.summary.failed,    exp.summary.failPct    + "%" ],
-    ];
 
-    if(exp.regression)
-        rows.push(["Regressions:", exp.summary.regressed, exp.summary.regressPct + "%"]);
+    var rows = [ ["Category", "Item", "Num", "Pct"] ];
 
-    if(exp.jsTest)
-        rows.push(["JS Failed:", exp.summary.jsFailed, exp.summary.jsFailPct + "%"]);
+    var cats = { };
+    for(var k in exp.tests)
+        cats[exp.tests[k].cat] = true;
+
+    cats = Object.keys(cats);
+    cats.sort();
+    cats.unshift("@@GLOBAL@@");
+
+
+    for(var i = 0; i < cats.length; i++) {
+        var cat     = cats[i];
+        var catName = cats[i] == "@@GLOBAL@@" ? "(ALL)" : cats[i];
+
+        rows.push([catName, "Total Tests:", exp.summary[cat].tests,     "100.0%"                     ]);
+        rows.push([catName, "Succeeded:",   exp.summary[cat].succeeded, exp.summary[cat].successPct + "%" ]);
+        rows.push([catName, "Failed:",      exp.summary[cat].failed,    exp.summary[cat].failPct    + "%" ]);
+
+        if(exp.regression)
+            rows.push([catName, "Regressions:", exp.summary[cat].regressed, exp.summary[cat].regressPct + "%"]);
+
+        if(exp.jsTest)
+            rows.push([catName, "JS Failed:", exp.summary[cat].jsFailed, exp.summary[cat].jsFailPct + "%"]);
+    }
 
     return rows;
 }
@@ -729,8 +763,8 @@ function testReportAnsi(data, summary) {
     };
 
     for(var row = 0; row < summary.length; row++) {
-        if(scolor[summary[row][0]] !== undefined)
-            var func = scolor[summary[row][0]];
+        if(scolor[summary[row][1]] !== undefined)
+            var func = scolor[summary[row][1]];
         else
             var func = function(x) { return x; };
         for(var col = 0; col < summary[row].length; col++) {
@@ -890,9 +924,10 @@ function testReportHTML(fd, data, summary) {
 
     for(var row = 0; row < summary.length; row++) {
         exp.fs.writeSync(fd, "<tr>"
-            + "<td style=\"" + sstyle[summary[row][0]] + "\">" + summary[row][0] + "</td>"
+            + "<td style=\"" + sstyle[summary[row][1]] + "\">" + summary[row][0] + "</td>"
             + "<td class='num'>" + summary[row][1] + "</td>"
             + "<td class='num'>" + summary[row][2] + "</td>"
+            + "<td class='num'>" + summary[row][3] + "</td>"
             + "</tr>\n"
         );
     }
