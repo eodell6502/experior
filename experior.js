@@ -5,6 +5,7 @@ var File = require("./lib/file.js");
 var exp = {
 
     ac:        require("ansi-colors"),
+    diff:      require("diff"),
     fs:        require("fs"),
     isaac:     require("isaac"),
     md5:       require('md5'),
@@ -39,6 +40,7 @@ var exp = {
     debug:        false,
     descWidth:    0,
     failOnly:     false,
+    fullRegress:  false,
     infiles:      [ ],
     jsTest:       false,
     longFormat:   false,
@@ -65,11 +67,15 @@ main();
 
 function main() {
 
-    // Process CLI options -----------------------------------------------------
+    //--------------------------------------------------------------------------
+    // Process CLI options
+    //--------------------------------------------------------------------------
 
     exp.minicle(exp.optionMap);
 
-    // Begin ceremonial output -------------------------------------------------
+    //--------------------------------------------------------------------------
+    // Begin ceremonial output
+    //--------------------------------------------------------------------------
 
     if(exp.optionMap.quiet.cnt)
         exp.quietMode = true;
@@ -80,8 +86,9 @@ function main() {
     if(exp.optionMap.help.cnt)
         usage(); // exits
 
-
-    // Set other config values -------------------------------------------------
+    //--------------------------------------------------------------------------
+    // Set other config values
+    //--------------------------------------------------------------------------
 
     if(exp.optionMap.debug.cnt) {
         exp.debug     = true;
@@ -116,8 +123,12 @@ function main() {
         }
     }
 
+    if(exp.optionMap["full-regress"].cnt)
+        exp.fullRegress = true;
 
-    // Have we been asked for PRNGs instead of a test run? ---------------------
+    //--------------------------------------------------------------------------
+    // Have we been asked for PRNGs instead of a test run?
+    //--------------------------------------------------------------------------
 
     if(exp.optionMap.prng.vals.length == 2) {
         if(exp.optionMap.seed.vals.length) {
@@ -132,7 +143,9 @@ function main() {
         exp.process.exit(1);
     }
 
-    // If we get here, it's test time! -----------------------------------------
+    //--------------------------------------------------------------------------
+    // If we get here, it's test time!
+    //--------------------------------------------------------------------------
 
     if(!exp.optionMap.infile.vals.length) {
         usage(false);
@@ -244,7 +257,7 @@ function findRegressions() {
 
 //==============================================================================
 // Reads the infile(s), looking for the message prefix and acting accordingly.
-// Content before the first test instruction is ignored.
+// Content before the first test instruction and after the last is ignored.
 //==============================================================================
 
 function analyzeTestData() {
@@ -331,6 +344,8 @@ function analyzeTestData() {
 
                     currentTest.success = msg.success;
                     var testBlob        = testData.join("\n");
+                    if(exp.fullRegress)
+                        currentTest.testData = testBlob;
                     currentTest.hash    = exp.md5(testBlob);
                     currentTest.size    = testBlob.length;
 
@@ -1039,21 +1054,7 @@ function error(level, message, location = "EXPERIOR") {
 
 
 
-/*
 
-    1.0.0:
-        - docs
-        - full regressions
-        - totals by category
-        - index by cat:id
-        - cleanup
-        - test missing end msg
-
-    - git-like command option for minicle
-    - Non-buggy table replacement
-
-
-*/
 
 
 

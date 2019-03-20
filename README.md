@@ -340,4 +340,23 @@ post-test is provided in `jstest.js`. Finally, there is a set of regression
 data in `regression_data.json`. This may be the most superfluous paragraph I've
 ever written.
 
+...TODO...
+
+## TODO
+
+### 1.0.0:
+
+* Finish cpov-style handling of paths
+* docs
+* full regressions
+  * emit diffs in reports
+* totals by category
+* index by cat:id
+* cleanup
+* test missing end msg
+
+### Post: 1.0.0
+
+* Once the next version of minicle is done, add git-like subcommands to simplify usage.
+* Implement a non-buggy replacement for the table package.
 
