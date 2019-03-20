@@ -440,6 +440,18 @@ class CrappyArray {
 module.exports = CrappyArray;
 ```
 
+The locations of the bugs are noted by comments in the source:
+
+* `this._length` and `this._contents.length` can get out of sync.
+   * The `length` setter is one place this happens.
+   * The `pop` method screws up by incrementing `this._length` instead of decrementing it.
+   * `shift` and `unshift` are reversed.
+   * `reverse` works properly, but if the two lengths have gotten out of sync, it unavoidably breaks.
+   * `join` doesn't behave properly because the default `separator` is `null` instead of `undefined`.
+
+The `test_program.js` runs a little long to quote in full, so take a look at it
+first, and we'll cover the important points.
+
 ... TODO ...
 
 ## Status
