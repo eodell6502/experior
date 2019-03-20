@@ -10,6 +10,7 @@ var exp = {
     isaac:     require("isaac"),
     md5:       require('md5'),
     minicle:   require("minicle"),
+    path:      require("path"),
     process:   require("process"),
     readline:  require("readline"),
     table:     require("table"),
@@ -72,6 +73,7 @@ function main() {
     //--------------------------------------------------------------------------
 
     exp.minicle(exp.optionMap);
+    exp.cwd = exp.path.normalize(exp.process.cwd());
 
     //--------------------------------------------------------------------------
     // Begin ceremonial output
@@ -117,7 +119,7 @@ function main() {
 
     if(exp.optionMap.jstest.vals.length) {
         try {
-            exp.jsTest = require(exp.optionMap.jstest.vals[0]);
+            exp.jsTest = require(exp.cwd + "/" + exp.optionMap.jstest.vals[0]);
         } catch(e) {
             error("fatal", "Unable to require JS test file " + exp.optionMap.jstest.vals[0] + "\n", "main");
         }
@@ -155,7 +157,7 @@ function main() {
 
     if(exp.optionMap.regression.vals.length) {
         try {
-            exp.regression = new File(exp.optionMap.regression.vals[0], "r");
+            exp.regression = new File(exp.cwd + "/" + exp.optionMap.regression.vals[0], "r");
         } catch(e) {
             error("fatal", "Unable to open regression file " + exp.optionMap.regression.vals[0] + ".", "main");
         }
@@ -269,7 +271,7 @@ function analyzeTestData() {
 
     for(var f = 0; f < exp.infiles.length; f++) {
 
-        var fp = new File(exp.infiles[f], "r");
+        var fp = new File(exp.cwd + "/" + exp.infiles[f], "r");
         if(!fp.open)
             error("fatal", "Unable to open input file " + exp.infiles[f] + " for reading.", "analyzeTestData");
         var lines = fp.read();
