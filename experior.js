@@ -358,7 +358,7 @@ function analyzeTestData() {
                         delete currentTest.jsTest;
                     }
 
-                    exp.tests[currentTest.id] = currentTest;
+                    exp.tests[currentTest.cat + ":" + currentTest.id] = currentTest;
 
                     exp.testCount++;
                     currentTest = null;
@@ -432,17 +432,9 @@ function prepOutfiles() {
 function sortTests() {
 
     for(var k in exp.tests)
-        exp.testSequence.push([exp.tests[k].cat, k]);
+        exp.testSequence.push(k);
 
-    exp.testSequence.sort(function(a, b) {
-        if(a[0] == b[0])
-            return a[1].localeCompare(b[1]);
-        else
-            return a[0].localeCompare(b[0]);
-    });
-
-    for(var i = 0; i < exp.testSequence.length; i++)
-        exp.testSequence[i] = exp.testSequence[i][1];
+    exp.testSequence.sort();
 
     error("debug", "exp.testSequence = ", "sortTests");
     if(exp.debug)
@@ -853,7 +845,7 @@ function testReportHTML(fd, data, summary) {
             // You know that point when you're almost finished with a lot of code
             // and the last thing you do makes it painfully clear that you should
             // go back and refactor all of it? This conditional is where that
-            // happens here. Hacky McHackhack, sheesh.
+            // happens for the reports. Hacky McHackhack, sheesh.
 
             if(failed && headerRow[col] != "Test" && headerRow[col] != "Reg." && headerRow[col] != "JTST") {
                 if(classItem.length) {

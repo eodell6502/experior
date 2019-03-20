@@ -350,9 +350,8 @@ ever written.
 * full regressions
   * emit diffs in reports
 * totals by category
-* index by cat:id
 * cleanup
-* test missing end msg
+
 
 ### Post: 1.0.0
 
