@@ -1,5 +1,5 @@
 # Experior 0.0.1
-**A minimal but powerful and language-agnostic unit and regression test tool.**
+**A minimalist but powerful and language-agnostic unit and regression test tool.**
 
 > "Experior" is a Latin verb meaning "to put to the test". It is the root of the English words "experiment", "experience", and "expert".
 
@@ -347,7 +347,6 @@ ever written.
 ### 1.0.0:
 
 * docs
-* emit diffs in reports if full-regress
 * cleanup
 
 
@@ -355,4 +354,6 @@ ever written.
 
 * Once the next version of minicle is done, add git-like subcommands to simplify usage.
 * Implement a non-buggy replacement for the table package.
+* Now that the requirements are fully understood, refactor the mass of ugly hacks in the report output routines.
+* Add diff output to non-HTML output.
 

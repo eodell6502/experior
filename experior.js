@@ -269,7 +269,6 @@ function findRegressions() {
             exp.tests[test].regression = old[test].hash == exp.tests[test].hash ? false : true;
             if(exp.fullRegress && exp.tests[test].regression) {
                 exp.tests[test].diff = exp.diff.diffTrimmedLines(old[test].testData, exp.tests[test].testData);
-                console.log(exp.tests[test].diff);
             }
         }
     }
@@ -844,6 +843,10 @@ function testReportHTML(fd, data, summary) {
             + "table.sgrid td.failed { background-color: #FDD; }\n"
             + "table.sgrid td.num { text-align: right; }\n"
             + "table.sgrid td.desc { white-space: normal; }\n"
+            + "div.diff { font: 10pt Consolas,Courier,fixed; white-space: pre; padding-top: 0.5em; padding-bottom: 0.5em; }\n"
+            + "div.diff div.unchanged { color: black; }\n"
+            + "div.diff div.added     { color: #080; }\n"
+            + "div.diff div.removed   { color: #A00; }\n"
             + "</style>\n"
         );
     }
@@ -857,14 +860,23 @@ function testReportHTML(fd, data, summary) {
     );
 
     var headerRow = data.shift();
+    var columnCount = headerRow.length;
     exp.fs.writeSync(fd,
         "<tr><th>" + headerRow.join("</th><th>") + "</th></tr>\n"
         + "</thead>\n"
         + "<tbody>\n"
     );
 
+    for(var i = 0; i < headerRow.length; i++) {
+        if(headerRow[i] == "Category")
+            var catCol = i;
+        else if(headerRow[i] == "Test ID")
+            var idCol = i;
+    }
+
     for(var row = 0; row < data.length; row++) {
         var failed = false;
+        var testId = data[row][catCol] + ":" + data[row][idCol];
 
         for(var col = 0; col < data[row].length; col++) {
             var datum = data[row][col].toString().trim();
@@ -909,6 +921,32 @@ function testReportHTML(fd, data, summary) {
         exp.fs.writeSync(fd,
             "<tr>" + data[row].join("") + "</td></tr>\n"
         );
+
+        // Initial version of diff output -------------------------------------
+
+        if(exp.fullRegress && exp.tests[testId].diff !== undefined) {
+            var diffOutput = [ "<tr><td colspan='" + columnCount + "'>\n<div class='diff'>" ];
+            var diff = exp.tests[testId].diff;
+            for(var d = 0; d < diff.length; d++) {
+                if(diff[d].removed) {
+                    var dclass = "removed";
+                    var pre    = " - ";
+                } else if(diff[d].added) {
+                    var dclass = "added";
+                    var pre    = " + ";
+                } else {
+                    var dclass = "unchanged";
+                    var pre    = "   ";
+                }
+                diff[d].value = diff[d].value.trimEnd().replace(/\n/g, "\n" + pre);
+                diffOutput.push("<div class='" + dclass + "'>" + pre + diff[d].value + "</div>");
+            }
+            diffOutput.push("</div>\n</td></tr>");
+            diffOutput = diffOutput.join("");
+            exp.fs.writeSync(fd, diffOutput);
+        }
+
+
     }
 
     exp.fs.writeSync(fd,
