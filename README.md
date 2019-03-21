@@ -347,8 +347,7 @@ ever written.
 ### 1.0.0:
 
 * docs
-* full regressions
-  * emit diffs in reports
+* emit diffs in reports if full-regress
 * cleanup
 
 

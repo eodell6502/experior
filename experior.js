@@ -55,6 +55,7 @@ var exp = {
     testCount:    0,     // count of tests
     fieldWidths:  null,  // width of report fields for console/ansi
     summary:      { },   // to be filled with totals, stats, etc.
+    diffs:        { },   // output diffs for full-regress mode
 }
 
 
@@ -266,6 +267,10 @@ function findRegressions() {
             error("warn", "Test " + test + " is present in regression file but not current test file.", "findRegression");
         } else {
             exp.tests[test].regression = old[test].hash == exp.tests[test].hash ? false : true;
+            if(exp.fullRegress && exp.tests[test].regression) {
+                exp.tests[test].diff = exp.diff.diffTrimmedLines(old[test].testData, exp.tests[test].testData);
+                console.log(exp.tests[test].diff);
+            }
         }
     }
     exp.regression.close();
