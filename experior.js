@@ -1,43 +1,38 @@
 #!/usr/bin/env node
 
-var File = require("./lib/file.js");
+const fs       = require("fs");
+const path     = require("path");
+
+const ac       = require("ansi-colors");
+const diff     = require("diff");      // TODO: major version upgrade
+const md5      = require("md5");
+const minicle  = require("minicle");
+const table    = require("table");     // TODO: major version upgrade
 
 var exp = {
-
-    ac:        require("ansi-colors"),
-    diff:      require("diff"),
-    fs:        require("fs"),
-    isaac:     require("isaac"),
-    md5:       require('md5'),
-    minicle:   require("minicle"),
-    mu:        require("minicle-usage"),
-    path:      require("path"),
-    process:   require("process"),
-    readline:  require("readline"),
-    table:     require("table"),
-
-    version:   "0.0.1",
+    version:   "1.0.0",
     formats:   [ "console", "ansi", "txt", "html", "csv", "json" ],
     prefix:    "@EXPERIOR:",
 
-    optionMap: {
-        infile:         { short: "i", vals: [ ], args: "<filename(s)>", desc: "Path to input file(s)." },
-        outfile:        { short: "o", vals: [ ], args: "<filename(s)>", desc: "Output file names." },
-        regression:     { short: "r", vals: [ ], args: "<filename>",    desc: "Regression test input file." },
-        "full-regress": { short: "R", cnt: 0,    args: "",              desc: "Create and use full regression data." },
-        jstest:         { short: "j", vals: [ ], args: "<filename>",    desc: "JavaScript test module." },
-        css:            { short: "c", vals: [ ], args: "<filename>",    desc: "CSS file to use with HTML output." },
-        long:           { short: "l", cnt: 0,    args: "",              desc: "Use long report format." },
-        width:          { short: "w", vals: [ ], args: "<number>",      desc: "Set width for text descriptions." },
-        msgprefix:      { short: "m", vals: [ ], args: "<string>",      desc: "Experior message prefix." },
-        failures:       { short: "f", cnt: 0,    args: "",              desc: "Only show failures in reports." },
-        prng:           { short: "p", vals: [ ], args: "<type> <num>",  desc: "Generate num random numbers of type." },
-        seed:           { short: "s", vals: [ ], args: "<num|string>",  desc: "Explicit PRNG seed. " },
-        verbose:        { short: "v", cnt: 0,    args: "",              desc: "Increase verbosity (1-4)." },
-        quiet:          { short: "q", cnt: 0,    args: "",              desc: "Suppress console output." },
-        debug:          { short: "d", cnt: 0,    args: "",              desc: "Display debugging info." },
-        help:           { short: "h", cnt: 0,    args: "",              desc: "Display this text.  " },
+    options: {
+        switches: {
+            infile:         { short: "i", maxArgs: Infinity },
+            outfile:        { short: "o", maxArgs: Infinity },
+            regression:     { short: "r", maxArgs: Infinity },
+            "full-regress": { short: "R", maxArgs: 0 },
+            jstest:         { short: "j", maxArgs: 1 },
+            css:            { short: "c", maxArgs: 1 },
+            long:           { short: "l", maxArgs: 0 },
+            width:          { short: "w", maxArgs: 1 },
+            msgprefix:      { short: "m", maxArgs: 1 },
+            failures:       { short: "f", maxArgs: 0 },
+            verbose:        { short: "v", maxArgs: 0 },
+            quiet:          { short: "q", maxArgs: 0 },
+            debug:          { short: "d", maxArgs: 0 },
+            help:           { short: "h", maxArgs: 0 },
+        },
     },
+
     css:          false,
     debug:        false,
     descWidth:    0,
@@ -60,6 +55,25 @@ var exp = {
 }
 exp.header = "Experior v" + exp.version + " -- Minimalist Unit/Regression Test Tool";
 
+/*
+
+TODO:
+
+
+* Eliminate File.js
+* Upgrade table package.
+* colorize usage
+
+* Test & refamiliarize
+* cleanup
+* Now that the requirements are fully understood, refactor the mass of ugly hacks in the report output routines.
+* Add diff output to non-HTML output.
+* Output feature switch(es): unit test table, totals, category totals
+
+
+
+*/
+
 
 main();
 
@@ -74,109 +88,92 @@ function main() {
     // Process CLI options
     //--------------------------------------------------------------------------
 
-    exp.minicle(exp.optionMap);
-    exp.cwd = exp.path.normalize(exp.process.cwd());
+    var options = minicle.parseCliArgs(process.argv.slice(2), exp.options);
+    exp.cwd = path.normalize(process.cwd());
 
     //--------------------------------------------------------------------------
     // Begin ceremonial output
     //--------------------------------------------------------------------------
 
-    if(exp.optionMap.help.cnt) {
-        exp.mu.header(exp.header);
-        exp.mu.usage(exp.optionMap, { usageText: "experior [options]" }); // exits
+    if(options.switches.help.cnt) {
+        minicle.outputHeader("@0E@" + exp.header + "@07@", "pcdos2", "@09@");
+        usage(); // exits
     }
 
-    if(exp.optionMap.quiet.cnt)
+    if(options.quiet.cnt)
         exp.quietMode = true;
 
     if(!exp.quietMode)
-        exp.mu.header(exp.header);
+        minicle.outputHeader("@0E@" + exp.header + "@07@", "pcdos2", "@09@");
 
     //--------------------------------------------------------------------------
     // Set other config values
     //--------------------------------------------------------------------------
 
-    if(exp.optionMap.debug.cnt) {
+    if(options.debug.cnt) {
         exp.debug     = true;
         exp.verbosity = 4;
     } else {
-        exp.verbosity = exp.optionMap.verbose.cnt;
+        exp.verbosity = options.verbose.cnt;
     }
 
-    if(exp.optionMap.quiet.cnt)
+    if(options.quiet.cnt)
         exp.quietMode = true;
 
-    if(exp.optionMap.failures.cnt)
+    if(options.failures.cnt)
         exp.failOnly = true;
 
-    if(exp.optionMap.width.vals.length) {
-        exp.descWidth = parseInt(exp.optionMap.width.vals[0]);
+    if(options.width.args.length) {
+        exp.descWidth = parseInt(options.width.args[0]);
         if(isNaN(exp.descWidth) || exp.descWidth < 1)
             error("fatal", "The width parameter must be greater than zero.", "main");
     }
 
-    if(exp.optionMap.long.cnt)
+    if(options.long.cnt)
         exp.longFormat = true;
 
-    if(exp.optionMap.css.vals.length)
-        exp.css = exp.optionMap.css.vals[0];
+    if(options.css.args.length)
+        exp.css = options.css.args[0];
 
-    if(exp.optionMap.jstest.vals.length) {
+    if(options.jstest.args.length) {
         try {
-            exp.jsTest = require(exp.cwd + "/" + exp.optionMap.jstest.vals[0]);
+            exp.jsTest = require(exp.cwd + "/" + options.jstest.args[0]);
         } catch(e) {
-            error("fatal", "Unable to require JS test file " + exp.optionMap.jstest.vals[0] + "\n", "main");
+            error("fatal", "Unable to require JS test file " + options.jstest.args[0] + "\n", "main");
         }
     }
 
-    if(exp.optionMap["full-regress"].cnt)
+    if(options["full-regress"].cnt)
         exp.fullRegress = true;
-
-    //--------------------------------------------------------------------------
-    // Have we been asked for PRNGs instead of a test run?
-    //--------------------------------------------------------------------------
-
-    if(exp.optionMap.prng.vals.length == 2) {
-        if(exp.optionMap.seed.vals.length) {
-            var seed = exp.optionMap.seed.vals.join("");
-        } else {
-            var seed = new Date().getTime();
-        }
-        prng(exp.optionMap.prng.vals[0], exp.optionMap.prng.vals[1], seed);
-        exp.process.exit(0);
-    } else if(exp.optionMap.prng.vals.length > 1) {
-        error("fatal", "PRNG requires both a type and a number.", "main");
-        exp.process.exit(1);
-    }
 
     //--------------------------------------------------------------------------
     // If we get here, it's test time!
     //--------------------------------------------------------------------------
 
-    if(!exp.optionMap.infile.vals.length) {
+    if(!options.infile.args.length) {
         usage(false);
         error("fatal", "At least one input file must be specified.", "main");
     }
-    exp.infiles = exp.optionMap.infile.vals;
+    exp.infiles = options.infile.args;
 
-    if(exp.optionMap.regression.vals.length) {
+    if(options.regression.args.length) {
         try {
-            exp.regression = new File(exp.cwd + "/" + exp.optionMap.regression.vals[0], "r");
+            exp.regression = exp.cwd + "/" + options.regression.args[0];
         } catch(e) {
-            error("fatal", "Unable to open regression file " + exp.optionMap.regression.vals[0] + ".", "main");
+            error("fatal", "Unable to open regression file " + options.regression.args[0] + ".", "main");
         }
     }
 
-    if(!exp.optionMap.outfile.vals.length)
+    if(!options.outfile.args.length)
         error("fatal", "At least one output file must be specified.", "main");
-    exp.outfiles = exp.optionMap.outfile.vals;
+    exp.outfiles = options.outfile.args;
 
     error("debug", "exp.outfiles = ", "main");
     if(exp.debug)
         console.log(exp.outfiles);
 
-    if(exp.optionMap.msgprefix.vals.length)
-        exp.prefix = exp.optionMap.msgprefix.vals[0];
+    if(options.msgprefix.args.length)
+        exp.prefix = options.msgprefix.args[0];
 
     prepOutfiles();
     analyzeTestData();
@@ -258,9 +255,8 @@ function createSummary() {
 //==============================================================================
 
 function findRegressions() {
-    var old = exp.regression.read();
     try {
-        old = JSON.parse(old);
+        var old = JSON.parse(fs.readFileSync(exp.regression, { encoding: "utf8"}));
     } catch(e) {
         error("fatal", "Unable to parse JSON in regression file.", "findRegressions");
     }
@@ -271,11 +267,10 @@ function findRegressions() {
         } else {
             exp.tests[test].regression = old[test].hash == exp.tests[test].hash ? false : true;
             if(exp.fullRegress && exp.tests[test].regression) {
-                exp.tests[test].diff = exp.diff.diffTrimmedLines(old[test].testData, exp.tests[test].testData);
+                exp.tests[test].diff = diff.diffTrimmedLines(old[test].testData, exp.tests[test].testData);
             }
         }
     }
-    exp.regression.close();
 
     error("debug", "exp.tests = ", "findRegressions");
     if(exp.debug)
@@ -297,12 +292,11 @@ function analyzeTestData() {
 
     for(var f = 0; f < exp.infiles.length; f++) {
 
-        var fp = new File(exp.cwd + "/" + exp.infiles[f], "r");
-        if(!fp.open)
+        try {
+            var lines = fs.readFileSync(exp.cwd + "/" + exp.infiles[f], { encoding: "utf8"}).split(/\n/);
+        } catch(e) {
             error("fatal", "Unable to open input file " + exp.infiles[f] + " for reading.", "analyzeTestData");
-        var lines = fp.read();
-        fp.close();
-        lines = lines.split(/\n/);
+        }
 
         // Iterate through lines in file ---------------------------------------
 
@@ -374,7 +368,7 @@ function analyzeTestData() {
                     var testBlob        = testData.join("\n");
                     if(exp.fullRegress)
                         currentTest.testData = testBlob;
-                    currentTest.hash    = exp.md5(testBlob);
+                    currentTest.hash    = md5(testBlob);
                     currentTest.size    = testBlob.length;
 
                     if(currentTest.jsTest) {
@@ -435,7 +429,7 @@ function prepOutfiles() {
         if(ext == "console" || ext == "ansi") {
             result[fname] = { fd: null, type: ext };
         } else {
-            var fd = exp.fs.openSync(fname, "w");
+            var fd = fs.openSync(fname, "w");
             if(fd)
                 result[fname] = { fd: fd, type: ext };
             else
@@ -498,19 +492,19 @@ function produceTestReports() {
                 break;
             case "txt":
                 testReportText(exp.outfiles[filename].fd, dataCopy, summaryCopy);
-                exp.fs.closeSync(exp.outfiles[filename].fd);
+                fs.closeSync(exp.outfiles[filename].fd);
                 break;
             case "csv":
                 testReportCSV(exp.outfiles[filename].fd, dataCopy, summaryCopy);
-                exp.fs.closeSync(exp.outfiles[filename].fd);
+                fs.closeSync(exp.outfiles[filename].fd);
                 break;
             case "html":
                 testReportHTML(exp.outfiles[filename].fd, dataCopy, summaryCopy);
-                exp.fs.closeSync(exp.outfiles[filename].fd);
+                fs.closeSync(exp.outfiles[filename].fd);
                 break;
             case "json":
                 testReportJSON(exp.outfiles[filename].fd);
-                exp.fs.closeSync(exp.outfiles[filename].fd);
+                fs.closeSync(exp.outfiles[filename].fd);
                 break;
         }
     }
@@ -628,7 +622,7 @@ function testReportConsole(data, summary, internal = false) {
         columns.desc.width = exp.descWidth;
 
     var config = {
-        border: exp.table.getBorderCharacters("ramac"),
+        border: table.getBorderCharacters("ramac"),
         columns: { }
     };
 
@@ -652,7 +646,7 @@ function testReportConsole(data, summary, internal = false) {
     }
 
     var sconfig = {
-        border: exp.table.getBorderCharacters("ramac"),
+        border: table.getBorderCharacters("ramac"),
         columns: {
             0: { alignment: "left"  },
             1: { alignment: "right" },
@@ -660,9 +654,9 @@ function testReportConsole(data, summary, internal = false) {
         }
     };
 
-    var result = exp.table.table(data, config) + "\n"
+    var result = table.table(data, config) + "\n"
             + "SUMMARY:\n"
-            + exp.table.table(summary, sconfig) + "\n\n";
+            + table.table(summary, sconfig) + "\n\n";
 
     if(internal)
         return result;
@@ -675,7 +669,7 @@ function testReportConsole(data, summary, internal = false) {
 
 function testReportAnsi(data, summary) {
     for(var i = 0; i < data[0].length; i++)
-        data[0][i] = exp.ac.yellow.bold(data[0][i]);
+        data[0][i] = ac.yellow.bold(data[0][i]);
 
     var columns = {
         test:  { alignment: "center", width: 4 },
@@ -691,17 +685,17 @@ function testReportAnsi(data, summary) {
         columns.desc.width = exp.descWidth;
 
     var config = {
-        border: exp.table.getBorderCharacters("honeywell"),
+        border: table.getBorderCharacters("honeywell"),
         columns: { }
     };
 
     for(var row = 0; row < data.length; row++) {
         if(data[row][0] == "n/a")
-            data[row][0] = exp.ac.blue(" -- ");
+            data[row][0] = ac.blue(" -- ");
         else if(data[row][0] == "ok")
-            data[row][0] = exp.ac.bgGreen.white.bold(" ok ");
+            data[row][0] = ac.bgGreen.white.bold(" ok ");
         else if(data[row][0] == "FAIL")
-            data[row][0] = exp.ac.bgRed.yellow.bold("FAIL");
+            data[row][0] = ac.bgRed.yellow.bold("FAIL");
     }
 
     var col = 0;
@@ -709,22 +703,22 @@ function testReportAnsi(data, summary) {
     if(exp.jsTest) {
         for(var row = 0; row < data.length; row++) {
             if(data[row][col] == "n/a")
-                data[row][col] = exp.ac.blue(" -- ");
+                data[row][col] = ac.blue(" -- ");
             else if(data[row][col] == "ok")
-                data[row][col] = exp.ac.bgGreen.white.bold(" ok ") + " ";
+                data[row][col] = ac.bgGreen.white.bold(" ok ") + " ";
             else if(data[row][col] == "FAIL")
-                data[row][col] = exp.ac.bgRed.yellow.bold("FAIL") + " ";
+                data[row][col] = ac.bgRed.yellow.bold("FAIL") + " ";
         }
         config.columns[col++] = columns.js;
     }
     if(exp.regression) {
         for(var row = 0; row < data.length; row++) {
             if(data[row][col] == "n/a")
-                data[row][col] = exp.ac.blue(" -- ");
+                data[row][col] = ac.blue(" -- ");
             else if(data[row][col] == "ok")
-                data[row][col] = exp.ac.bgGreen.white.bold(" ok ");
+                data[row][col] = ac.bgGreen.white.bold(" ok ");
             else if(data[row][col] == "FAIL")
-                data[row][col] = exp.ac.bgRed.yellow.bold("FAIL");
+                data[row][col] = ac.bgRed.yellow.bold("FAIL");
         }
         config.columns[col++] = columns.reg;
     }
@@ -741,7 +735,7 @@ function testReportAnsi(data, summary) {
         }
         if(failed) {
             for(var c = catAndLater; c < data[row].length - 1; c++) {
-                data[row][c] = exp.ac.red.bold(data[row][c]) + exp.ac.white("");
+                data[row][c] = ac.red.bold(data[row][c]) + ac.white("");
             }
         }
     }
@@ -753,7 +747,7 @@ function testReportAnsi(data, summary) {
         config.columns[col++] = columns.desc;
 
     var sconfig = {
-        border: exp.table.getBorderCharacters("honeywell"),
+        border: table.getBorderCharacters("honeywell"),
         columns: {
             0: { alignment: "left"  },
             1: { alignment: "right" },
@@ -762,11 +756,11 @@ function testReportAnsi(data, summary) {
     };
 
     var scolor = {
-        "Total Tests:": exp.ac.white.bold,
-        "Succeeded:":   exp.ac.green.bold,
-        "Failed:":      exp.ac.red.bold,
-        "JS Failed:":   exp.ac.magenta.bold,
-        "Regressions:": exp.ac.yellow.bold
+        "Total Tests:": ac.white.bold,
+        "Succeeded:":   ac.green.bold,
+        "Failed:":      ac.red.bold,
+        "JS Failed:":   ac.magenta.bold,
+        "Regressions:": ac.yellow.bold
     };
 
     for(var row = 0; row < summary.length; row++) {
@@ -779,9 +773,9 @@ function testReportAnsi(data, summary) {
         }
     }
 
-    var result = exp.table.table(data, config) + "\n"
-            + exp.ac.white.bold("SUMMARY:\n")
-            + exp.table.table(summary, sconfig) + "\n\n";
+    var result = table.table(data, config) + "\n"
+            + ac.white.bold("SUMMARY:\n")
+            + table.table(summary, sconfig) + "\n\n";
 
     console.log(result);
 }
@@ -790,15 +784,15 @@ function testReportAnsi(data, summary) {
 
 function testReportText(fd, data, summary) {
     var content = testReportConsole(data, summary, true);
-    exp.fs.writeSync(fd, content);
+    fs.writeSync(fd, content);
 }
 
 //------------------------------------------------------------------------------
 
 function testReportCSV(fd, data, summary) {
-    exp.fs.writeSync(fd, csvify(data));
-    exp.fs.writeSync(fd, "\n\nSUMMARY:\n");
-    exp.fs.writeSync(fd, csvify(summary));
+    fs.writeSync(fd, csvify(data));
+    fs.writeSync(fd, "\n\nSUMMARY:\n");
+    fs.writeSync(fd, csvify(summary));
 }
 
 function csvify(data) {
@@ -822,15 +816,15 @@ function csvify(data) {
 
 function testReportHTML(fd, data, summary) {
 
-    exp.fs.writeSync(fd,
+    fs.writeSync(fd,
         "<!doctype html>\n"
         + "<html><head><meta charset=\"utf-8\">\n"
         + "<title>Experior Test Results</title>\n"
     );
     if(exp.css) {
-        exp.fs.writeSync(fd, "<link href=\"" + exp.css + "\" rel=\"stylesheet\" type=\"text/css\" />\n");
+        fs.writeSync(fd, "<link href=\"" + exp.css + "\" rel=\"stylesheet\" type=\"text/css\" />\n");
     } else {
-        exp.fs.writeSync(fd,
+        fs.writeSync(fd,
             "<style type='text/css'>\n"
             + "body,table { font: 10pt Arial,Helvetica,sans-serif; }\n"
             + "table.sgrid { margin-top: 0.5em; border-collapse: collapse; }\n"
@@ -853,7 +847,7 @@ function testReportHTML(fd, data, summary) {
             + "</style>\n"
         );
     }
-    exp.fs.writeSync(fd,
+    fs.writeSync(fd,
         "</head>\n"
         + "<body>\n"
         + "<h1>Experior Test Results</h1>\n"
@@ -864,7 +858,7 @@ function testReportHTML(fd, data, summary) {
 
     var headerRow = data.shift();
     var columnCount = headerRow.length;
-    exp.fs.writeSync(fd,
+    fs.writeSync(fd,
         "<tr><th>" + headerRow.join("</th><th>") + "</th></tr>\n"
         + "</thead>\n"
         + "<tbody>\n"
@@ -921,7 +915,7 @@ function testReportHTML(fd, data, summary) {
             datum = "<td" + classItem + ">" + datum + "</td>";
             data[row][col] = datum;
         }
-        exp.fs.writeSync(fd,
+        fs.writeSync(fd,
             "<tr>" + data[row].join("") + "</td></tr>\n"
         );
 
@@ -946,13 +940,13 @@ function testReportHTML(fd, data, summary) {
             }
             diffOutput.push("</div>\n</td></tr>");
             diffOutput = diffOutput.join("");
-            exp.fs.writeSync(fd, diffOutput);
+            fs.writeSync(fd, diffOutput);
         }
 
 
     }
 
-    exp.fs.writeSync(fd,
+    fs.writeSync(fd,
         "</tbody>\n"
         + "</table>\n"
         + "<h2>Summary</h2>\n"
@@ -969,7 +963,7 @@ function testReportHTML(fd, data, summary) {
     };
 
     for(var row = 0; row < summary.length; row++) {
-        exp.fs.writeSync(fd, "<tr>"
+        fs.writeSync(fd, "<tr>"
             + "<td style=\"" + sstyle[summary[row][1]] + "\">" + summary[row][0] + "</td>"
             + "<td class='num'>" + summary[row][1] + "</td>"
             + "<td class='num'>" + summary[row][2] + "</td>"
@@ -978,7 +972,7 @@ function testReportHTML(fd, data, summary) {
         );
     }
 
-    exp.fs.writeSync(fd, "</tbody>\n</table>\n</body>\n</html>\n");
+    fs.writeSync(fd, "</tbody>\n</table>\n</body>\n</html>\n");
 
 }
 
@@ -996,7 +990,7 @@ function testReportJSON(fd) {
         }
     }
 
-    exp.fs.writeSync(fd, JSON.stringify(data));
+    fs.writeSync(fd, JSON.stringify(data));
 }
 
 
@@ -1013,42 +1007,32 @@ function inArray(val, ary) {
 
 
 //==============================================================================
-// Outputs num pseudo-random numbers of the specified type, where type can be
-// 8, 16, 24, 32, or 64 for integers, or "float" for floats.
 //==============================================================================
 
-function prng(type, num, seed) {
+function usage() {
+    console.log(`
+    Usage: experior [options]
 
-    exp.isaac.seed(seed);
+    -i, --infile        <filename(s)>  Path to input file(s).
+    -o, --outfile       <filename(s)>  Output file names.
+    -r, --regression    <filename>     Regression test input file.
+    -R, --full-regress                 Create and use full regression data.
+    -j, --jstest        <filename>     JavaScript test module.
+    -c, --css           <filename>     CSS file to use with HTML output.
+    -l, --long                         Use long report format.
+    -w, --width         <number>       Set width for text descriptions.
+    -m, --msgprefix     <string>       Experior message prefix.
+    -f, --failures                     Only show failures in reports.
+    -p, --prng          <type> <num>   Generate num random numbers of type.
+    -s, --seed          <num|string>   Explicit PRNG seed.
+    -v, --verbose                      Increase verbosity (1-4).
+    -q, --quiet                        Suppress console output.
+    -d, --debug                        Display debugging info.
+    -h, --help                         Display this text.`);
 
-    num = parseInt(num);
-    if(isNaN(num) || num < 1)
-        error("fatal", "PRNG num must be an integer greater than zero.", "EXPERIOR");
-
-    switch(type) {
-
-        case "8":
-        case "16":
-        case "24":
-        case "32":
-        case "64":
-            type = parseInt(type);
-            var base = Math.pow(2, type);
-            for(var i = 0; i < num; i++)
-                console.log(Math.floor(exp.isaac.random() * base));
-            break;
-
-        case "float":
-            for(var i = 0; i < num; i++)
-                console.log(exp.isaac.random());
-            break;
-
-        default:
-            error("fatal", "Legal values for PRNG type are 8, 16, 24, 32, 64, or \"float\".", "EXPERIOR");
-
-    }
-
+    process.exit(0);
 }
+
 
 
 //==============================================================================
@@ -1058,28 +1042,9 @@ function prng(type, num, seed) {
 
 function error(level, message, location = "EXPERIOR") {
 
-    if(!exp.quietMode) {
-        switch(level) {
-            case "fatal":
-                console.log(exp.ac.bgRed.yellowBright("[" + location + "]") + exp.ac.redBright(" FATAL ERROR: ") + exp.ac.yellowBright(message));
-                break;
-            case "warn":
-                if(exp.verbosity >= 1)
-                    console.log(exp.ac.bgYellow.whiteBright("[" + location + "]") + exp.ac.yellowBright(" WARNING: ") + message);
-                break;
-            case "info":
-                if(exp.verbosity >= 2)
-                    console.log(exp.ac.bgGreen.whiteBright("[" + location + "]") + exp.ac.greenBright(" INFO: ") + message);
-                break;
-            case "debug":
-                if(exp.verbosity >= 3 || exp.debug)
-                    console.log("[" + location + "] DEBUG: " + message);
-                break;
-        }
-    }
+    if(!exp.quietMode)
+        minicle.errmsg(level, message, location, { verbosity: exp.verbosity });
 
-    if(level == "fatal" && exp.debug < 2)
-        this.process.exit(1);
 }
 
 
