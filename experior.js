@@ -60,9 +60,7 @@ exp.header = "Experior v" + exp.version + " -- Minimalist Unit/Regression Test T
 TODO:
 
 
-* Eliminate File.js
 * Upgrade table package.
-* colorize usage
 
 * Test & refamiliarize
 * cleanup
@@ -1010,25 +1008,25 @@ function inArray(val, ary) {
 //==============================================================================
 
 function usage() {
-    console.log(`
-    Usage: experior [options]
+    console.log(minicle.ansiMarkup(`
+    @07@Usage: @0F@experior @0B@[options]
 
-    -i, --infile        <filename(s)>  Path to input file(s).
-    -o, --outfile       <filename(s)>  Output file names.
-    -r, --regression    <filename>     Regression test input file.
-    -R, --full-regress                 Create and use full regression data.
-    -j, --jstest        <filename>     JavaScript test module.
-    -c, --css           <filename>     CSS file to use with HTML output.
-    -l, --long                         Use long report format.
-    -w, --width         <number>       Set width for text descriptions.
-    -m, --msgprefix     <string>       Experior message prefix.
-    -f, --failures                     Only show failures in reports.
-    -p, --prng          <type> <num>   Generate num random numbers of type.
-    -s, --seed          <num|string>   Explicit PRNG seed.
-    -v, --verbose                      Increase verbosity (1-4).
-    -q, --quiet                        Suppress console output.
-    -d, --debug                        Display debugging info.
-    -h, --help                         Display this text.`);
+    @0A@-i, --infile        @0B@<filename(s)>  @07@Path to input file(s).
+    @0A@-o, --outfile       @0B@<filename(s)>  @07@Output file names.
+    @0A@-r, --regression    @0B@<filename>     @07@Regression test input file.
+    @0A@-R, --full-regress  @0B@               @07@Create and use full regression data.
+    @0A@-j, --jstest        @0B@<filename>     @07@JavaScript test module.
+    @0A@-c, --css           @0B@<filename>     @07@CSS file to use with HTML output.
+    @0A@-l, --long          @0B@               @07@Use long report format.
+    @0A@-w, --width         @0B@<number>       @07@Set width for text descriptions.
+    @0A@-m, --msgprefix     @0B@<string>       @07@Experior message prefix.
+    @0A@-f, --failures      @0B@               @07@Only show failures in reports.
+    @0A@-p, --prng          @0B@<type> <num>   @07@Generate num random numbers of type.
+    @0A@-s, --seed          @0B@<num|string>   @07@Explicit PRNG seed.
+    @0A@-v, --verbose       @0B@               @07@Increase verbosity (1-4).
+    @0A@-q, --quiet         @0B@               @07@Suppress console output.
+    @0A@-d, --debug         @0B@               @07@Display debugging info.
+    @0A@-h, --help          @0B@               @07@Display this text.`));
 
     process.exit(0);
 }
