@@ -98,7 +98,7 @@ function main() {
         usage(); // exits
     }
 
-    if(options.quiet.cnt)
+    if(options.switches.quiet.cnt)
         exp.quietMode = true;
 
     if(!exp.quietMode)
@@ -108,70 +108,70 @@ function main() {
     // Set other config values
     //--------------------------------------------------------------------------
 
-    if(options.debug.cnt) {
+    if(options.switches.debug.cnt) {
         exp.debug     = true;
         exp.verbosity = 4;
     } else {
-        exp.verbosity = options.verbose.cnt;
+        exp.verbosity = options.switches.verbose.cnt;
     }
 
-    if(options.quiet.cnt)
+    if(options.switches.quiet.cnt)
         exp.quietMode = true;
 
-    if(options.failures.cnt)
+    if(options.switches.failures.cnt)
         exp.failOnly = true;
 
-    if(options.width.args.length) {
-        exp.descWidth = parseInt(options.width.args[0]);
+    if(options.switches.width.args.length) {
+        exp.descWidth = parseInt(options.switches.width.args[0]);
         if(isNaN(exp.descWidth) || exp.descWidth < 1)
             error("fatal", "The width parameter must be greater than zero.", "main");
     }
 
-    if(options.long.cnt)
+    if(options.switches.long.cnt)
         exp.longFormat = true;
 
-    if(options.css.args.length)
+    if(options.switches.css.args.length)
         exp.css = options.css.args[0];
 
-    if(options.jstest.args.length) {
+    if(options.switches.jstest.args.length) {
         try {
-            exp.jsTest = require(exp.cwd + "/" + options.jstest.args[0]);
+            exp.jsTest = require(exp.cwd + "/" + options.switches.jstest.args[0]);
         } catch(e) {
-            error("fatal", "Unable to require JS test file " + options.jstest.args[0] + "\n", "main");
+            error("fatal", "Unable to require JS test file " + options.switches.jstest.args[0] + "\n", "main");
         }
     }
 
-    if(options["full-regress"].cnt)
+    if(options.switches["full-regress"].cnt)
         exp.fullRegress = true;
 
     //--------------------------------------------------------------------------
     // If we get here, it's test time!
     //--------------------------------------------------------------------------
 
-    if(!options.infile.args.length) {
+    if(!options.switches.infile.args.length) {
         usage(false);
         error("fatal", "At least one input file must be specified.", "main");
     }
-    exp.infiles = options.infile.args;
+    exp.infiles = options.switches.infile.args;
 
-    if(options.regression.args.length) {
+    if(options.switches.regression.args.length) {
         try {
-            exp.regression = exp.cwd + "/" + options.regression.args[0];
+            exp.regression = exp.cwd + "/" + options.switches.regression.args[0];
         } catch(e) {
-            error("fatal", "Unable to open regression file " + options.regression.args[0] + ".", "main");
+            error("fatal", "Unable to open regression file " + options.switches.regression.args[0] + ".", "main");
         }
     }
 
-    if(!options.outfile.args.length)
+    if(!options.switches.outfile.args.length)
         error("fatal", "At least one output file must be specified.", "main");
-    exp.outfiles = options.outfile.args;
+    exp.outfiles = options.switches.outfile.args;
 
     error("debug", "exp.outfiles = ", "main");
     if(exp.debug)
         console.log(exp.outfiles);
 
-    if(options.msgprefix.args.length)
-        exp.prefix = options.msgprefix.args[0];
+    if(options.switches.msgprefix.args.length)
+        exp.prefix = options.switches.msgprefix.args[0];
 
     prepOutfiles();
     analyzeTestData();
@@ -1021,8 +1021,6 @@ function usage() {
     @0A@-w, --width         @0B@<number>       @07@Set width for text descriptions.
     @0A@-m, --msgprefix     @0B@<string>       @07@Experior message prefix.
     @0A@-f, --failures      @0B@               @07@Only show failures in reports.
-    @0A@-p, --prng          @0B@<type> <num>   @07@Generate num random numbers of type.
-    @0A@-s, --seed          @0B@<num|string>   @07@Explicit PRNG seed.
     @0A@-v, --verbose       @0B@               @07@Increase verbosity (1-4).
     @0A@-q, --quiet         @0B@               @07@Suppress console output.
     @0A@-d, --debug         @0B@               @07@Display debugging info.
