@@ -174,20 +174,20 @@ to go.
 
 ### .txt/console
 
-![console output](misc/console.png)
+![console output](img/console.png)
 
 ### ANSI console
 
 MS-DOS survivors, represent!
 
-![ansi console output](misc/ansi.png)
+![ansi console output](img/ansi.png)
 
 ### HTML
 
 If you don't care for my dubious web design skills, Experior will let you substitute
 your own CSS stylesheet with the `--css` switch.
 
-![html output](misc/html.png)
+![html output](img/html.png)
 
 ### CSV
 
