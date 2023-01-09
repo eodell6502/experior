@@ -59,10 +59,9 @@ exp.header = "Experior v" + exp.version + " -- Minimalist Unit/Regression Test T
 
 TODO:
 
-* improve colors in summary table
-
 * Test & refamiliarize
 * cleanup
+* new images for the docs
 * Now that the requirements are fully understood, refactor the mass of ugly hacks in the report output routines.
 * Add diff output to non-HTML output.
 * Output feature switch(es): unit test table, totals, category totals
@@ -831,6 +830,8 @@ function testReportHTML(fd, data, summary) {
             + "table.sgrid > thead { background-color: #263E4F;  color: white; }\n"
             + "table.sgrid > td { padding-left: 0.5em; padding-right: 0.5em; vertical-align: top; }\n"
             + "table.sgrid td { border: 0.25pt solid black; white-space: nowrap; vertical-align: top; }\n"
+            + "table.sgrid tr.bg0 { background-color: #EEF; }\n"
+            + "table.sgrid tr.bg1 { background-color: #FFF; }\n"
             + "table.sgrid th { background-color: #3C607B; border: 0.25pt solid black; }\n"
             + "table.sgrid td { padding-left: 0.25em; padding-right: 0.25em; }\n"
             + "table.sgrid td.success { color: white; background-color: #0A0; text-align: center; }\n"
@@ -953,7 +954,6 @@ function testReportHTML(fd, data, summary) {
         + "<table class=\"sgrid\" id=\"testSummary\">\n"
     );
 
-    var rcolors = [ "#EEF", "#FFF" ];
     var cgroup = 0;
     var lastCat = null;
 
@@ -965,7 +965,7 @@ function testReportHTML(fd, data, summary) {
             cgroup = cgroup ? 0 : 1;
             lastCat = summary[row][0];
         }
-        fs.writeSync(fd, "<tr style='background-color: " + rcolors[cgroup] + ";'>"
+        fs.writeSync(fd, "<tr class='bg" + cgroup + "'>"
             + "<td>" + summary[row][0] + "</td>"
             + "<td class='num'>" + summary[row][1] + "</td>"
             + "<td class='num'>" + summary[row][2] + "</td>"

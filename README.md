@@ -13,7 +13,7 @@ validation functions in JavaScript, and Experior will run them against the test
 output. Finally, Experior can compare your current test output against a copy of
 previous test output and alert you to regressions.
 
-Full details are below, including full demo to serve as an example.
+Full details are below, including s demo to serve as an example.
 
 ## Installation
 
@@ -43,18 +43,11 @@ $ npm install experior --global
     -w, --width         <number>       Set width for text descriptions.
     -m, --msgprefix     <string>       Experior message prefix.
     -f, --failures                     Only show failures in reports.
-    -p, --prng          <type> <num>   Generate num random numbers of type.
-    -s, --seed          <num|string>   Explicit PRNG seed.
     -v, --verbose                      Increase verbosity (1-4).
     -q, --quiet                        Suppress console output.
     -d, --debug                        Display debugging info.
     -h, --help                         Display this text.
 ```
-
-Experior has two mutually-exclusive operating modes, testing and generation of
-test data. The latter is activated with the `--prng` switch.
-
-### Testing Switches
 
 When performing tests, there are two mandatory switches, `--infile` and
 `--outfile`.
@@ -108,16 +101,6 @@ __-d, --debug__: Turns on debugging output.
 
 __-d, --help__: Displays the usage summary above.
 
-### Test Data Generation Switches
-
-Experior includes the ability to generate numeric test data.
-
-__-p, --prng__: Takes two arguments, a _type_ and the number of items to
-generate. The type may be `8`, `16`, `24`, `32`, or `64` for integers, or
-`float` for floating point numbers.
-
-__-s, --seed__: Provides an optional seed for the random number generator. This
-can be either a number or a string.
 
 ## Test File Format
 
@@ -370,13 +353,4 @@ required if you want the detailed diff. Without it, Experior just stores a hash
 of the test data, which is enough to detect regressions if you don't need or
 want the diff.
 
-## TODO
 
-### 1.0.0
-
-* switch to current version of minicle.
-* cleanup
-* Upgrade table package.
-* Now that the requirements are fully understood, refactor the mass of ugly hacks in the report output routines.
-* Add diff output to non-HTML output.
-* Output feature switch(es): unit test table, totals, category totals
