@@ -81,6 +81,8 @@ class CrappyArray {
     }
 
     join(separator = null) {
+        if(separator === null)
+            separator = ",";
         return this._contents.join(separator);
     }
 }
