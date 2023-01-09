@@ -647,7 +647,8 @@ function testReportConsole(data, summary, internal = false) {
         columns: {
             0: { alignment: "left"  },
             1: { alignment: "right" },
-            2: { alignment: "right" }
+            2: { alignment: "right" },
+            3: { alignment: "right" }
         }
     };
 
@@ -748,7 +749,8 @@ function testReportAnsi(data, summary) {
         columns: {
             0: { alignment: "left"  },
             1: { alignment: "right" },
-            2: { alignment: "right" }
+            2: { alignment: "right" },
+            3: { alignment: "right" },
         }
     };
 
@@ -765,7 +767,8 @@ function testReportAnsi(data, summary) {
             var func = scolor[summary[row][1]];
         else
             var func = function(x) { return x; };
-        for(var col = 0; col < summary[row].length; col++) {
+
+        for(var col = 1; col < summary[row].length; col++) {
             summary[row][col] = func(summary[row][col]);
         }
     }
@@ -948,20 +951,22 @@ function testReportHTML(fd, data, summary) {
         + "</table>\n"
         + "<h2>Summary</h2>\n"
         + "<table class=\"sgrid\" id=\"testSummary\">\n"
-        + "<tbody>\n"
     );
 
-    var sstyle = {
-        "Total Tests:": "font-weight: bold; color: #FFF; background-color: #000;",
-        "Succeeded:":   "font-weight: bold; color: #FFF; background-color: #0A0;",
-        "Failed:":      "font-weight: bold; color: #FF0; background-color: #A00;",
-        "JS Failed:":   "font-weight: bold; color: #FFF; background-color: #A0A;",
-        "Regressions:": "font-weight: bold; color: #000; background-color: #FF0;",
-    };
+    var rcolors = [ "#EEF", "#FFF" ];
+    var cgroup = 0;
+    var lastCat = null;
+
+    var headerRow = summary.shift();
+    fs.writeSync(fd, "<thead><tr><th>" + headerRow.join("</th><th>") + "</th></tr></thead><tbody>\n");
 
     for(var row = 0; row < summary.length; row++) {
-        fs.writeSync(fd, "<tr>"
-            + "<td style=\"" + sstyle[summary[row][1]] + "\">" + summary[row][0] + "</td>"
+        if(lastCat != summary[row][0]) {
+            cgroup = cgroup ? 0 : 1;
+            lastCat = summary[row][0];
+        }
+        fs.writeSync(fd, "<tr style='background-color: " + rcolors[cgroup] + ";'>"
+            + "<td>" + summary[row][0] + "</td>"
             + "<td class='num'>" + summary[row][1] + "</td>"
             + "<td class='num'>" + summary[row][2] + "</td>"
             + "<td class='num'>" + summary[row][3] + "</td>"
