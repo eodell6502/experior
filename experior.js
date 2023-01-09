@@ -59,9 +59,6 @@ exp.header = "Experior v" + exp.version + " -- Minimalist Unit/Regression Test T
 
 TODO:
 
-
-* Upgrade table package.
-
 * Test & refamiliarize
 * cleanup
 * Now that the requirements are fully understood, refactor the mass of ugly hacks in the report output routines.
