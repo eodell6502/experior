@@ -17,8 +17,8 @@ Full details are below, including s demo to serve as an example.
 
 ## Installation
 
-If you're not interested in poking around with the source, the easiest thing to do
-is to just use `npm` to install the Node.js module:
+If you're not interested in poking around with the source, the easiest thing to
+do is to just use `npm` to install the Node.js module:
 
 ```bash
 $ npm install experior --global
@@ -77,8 +77,9 @@ with regressions in the HTML version of the reports.
 __-j, --jstest__: Specifies the name of a JavaScript module containing tests to
 run against the test data. See the _JavaScript Tests_ section below for details.
 
-__-c, --css__: HTML reports have their own inline styles, but if you want to
-replace it with your own, use `-c` to provide a URL for an external stylesheet.
+__-c, --css__: HTML reports have their own embedded CSS stylesheet, but if you
+want to replace it with your own, use `-c` to provide a URL for an external
+stylesheet.
 
 __-l, --long__: Activates the long report format which includes detailed test
 descriptions.
@@ -167,7 +168,7 @@ MS-DOS survivors, represent!
 
 ### HTML
 
-If you don't care for my dubious web design skills, Experior will let you substitute
+If you don't care for the default appearance, Experior will let you substitute
 your own CSS stylesheet with the `--css` switch.
 
 ![html output](img/html.png)
@@ -194,8 +195,8 @@ Regressions:,1,25.0%
 
 ### JSON
 
-JSON output is produced as a single line. We've dumped it here by passing it through
-Node's `console.log` to make it more readable.
+JSON output is produced as a single line. We've reformatted it here to make it
+more readable.
 
 ```javascript
 { TestOne:

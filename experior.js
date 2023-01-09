@@ -59,14 +59,10 @@ exp.header = "Experior v" + exp.version + " -- Minimalist Unit/Regression Test T
 
 TODO:
 
-* Test & refamiliarize
 * cleanup
-* new images for the docs
 * Now that the requirements are fully understood, refactor the mass of ugly hacks in the report output routines.
 * Add diff output to non-HTML output.
 * Output feature switch(es): unit test table, totals, category totals
-
-
 
 */
 
