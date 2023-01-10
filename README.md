@@ -321,8 +321,7 @@ you'll find the example files in the `/examples` subdirectory. It includes the
 obscurely named `test_program.js` which runs a decently wide range of simple
 tests on a crappy array implementation, `CrappyArray.js`. An example JavaScript
 post-test is provided in `jstests.js`. Finally, there is a set of regression
-data in `regression_data.json`. This may be the most superfluous paragraph I've
-ever written.
+data in `regression_data.json`.
 
 To get started, go to the `/examples` subdirectory and run the test program:
 
@@ -346,7 +345,7 @@ and four output files named `test_report.txt`, `test_report.csv`,
 `test_report.json`, and `test_report.html`. Open `test_report.html` in your
 browser to see the results.
 
-You'll note that the first test fails and includes a diff with the JSON output
+You'll note that last first test fails and includes a diff with the JSON output
 from a hypothetical previous run, `regression_data.json`. This is actually
 identical to the `test_report.json` file you just generated, minus some changes
 I made to the first test's output to simulate a regression. The `-R` switch is
