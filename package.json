@@ -1,6 +1,6 @@
 {
   "name": "experior",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A powerful but minimalist unit and regression test tool.",
   "main": "experior.js",
   "scripts": {

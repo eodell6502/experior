@@ -10,7 +10,7 @@ const minicle  = require("minicle");
 const table    = require("table");     // TODO: major version upgrade
 
 var exp = {
-    version:   "1.0.0",
+    version:   "1.0.1",
     formats:   [ "console", "ansi", "txt", "html", "csv", "json" ],
     prefix:    "@EXPERIOR:",
 
@@ -59,6 +59,7 @@ exp.header = "Experior v" + exp.version + " -- Minimalist Unit/Regression Test T
 
 TODO:
 
+* Add Metrogon title graphic to docs.
 * Add diff output to non-HTML output.
 * Output feature switch(es): unit test table, totals, category totals
 

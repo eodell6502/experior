@@ -1,4 +1,7 @@
-# Experior 1.0.0
+# Experior 1.0.1
+
+![Experior title](img/experior.png)
+
 **A minimalist but powerful and language-agnostic unit and regression test tool.**
 
 > "Experior" is a Latin verb meaning "to put to the test". It is the root of the English words "experiment", "experience", and "expert".
@@ -28,7 +31,7 @@ $ npm install experior --global
 
 ```
 ===========================================================================
-         Experior v1.0.0 -- Minimalist Unit/Regression Test Tool
+         Experior v1.0.1 -- Minimalist Unit/Regression Test Tool
 ===========================================================================
 
   Usage: experior [options]
